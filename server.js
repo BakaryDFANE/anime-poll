@@ -5,7 +5,10 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
+  : false;
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -28,9 +31,27 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + unique + ext);
   }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: function (req, file, cb) {
+    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image uploads are allowed'));
+    }
+    cb(null, true);
+  }
+});
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change';
-app.use(session({ secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { secure: false } }));
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  }
+}));
 
 const POLLS_FILE = path.join(__dirname, 'polls.json');
 const VOTES_FILE = path.join(__dirname, 'votes.json');
@@ -46,6 +67,14 @@ function safeReadJSON(filePath, defaultValue) {
 
 function safeWriteJSON(filePath, obj) {
   fs.writeFileSync(filePath, JSON.stringify(obj, null, 2), 'utf8');
+}
+
+function getOptionName(option) {
+  return typeof option === 'string' ? option : option && option.name;
+}
+
+function hasOption(poll, optionName) {
+  return poll.options.some(option => getOptionName(option) === optionName);
 }
 
 // Ensure data files exist
@@ -67,10 +96,9 @@ app.get('/results', (req, res) => {
 
   const results = polls.map(poll => {
     const counts = {};
-    // option may be string or object { name, image }
     poll.options.forEach(opt => {
-      const name = typeof opt === 'string' ? opt : opt.name;
-      counts[name] = 0;
+      const name = getOptionName(opt);
+      if (name) counts[name] = 0;
     });
     votes.filter(v => v.pollId === poll.id).forEach(v => {
       if (counts.hasOwnProperty(v.option)) counts[v.option]++;
@@ -88,7 +116,7 @@ app.post('/vote', (req, res) => {
   const polls = safeReadJSON(POLLS_FILE, { polls: [] }).polls;
   const poll = polls.find(p => p.id === pollId);
   if (!poll) return res.status(404).json({ error: 'Poll not found' });
-  if (!poll.options.includes(option)) return res.status(400).json({ error: 'Invalid option' });
+  if (!hasOption(poll, option)) return res.status(400).json({ error: 'Invalid option' });
 
   const votesObj = safeReadJSON(VOTES_FILE, { votes: [] });
   votesObj.votes.push({ pollId, option, ts: Date.now() });
@@ -132,9 +160,7 @@ app.post('/admin/addOption', (req, res) => {
   const data = safeReadJSON(POLLS_FILE, { polls: [] });
   const poll = data.polls.find(p => p.id === pollId);
   if (!poll) return res.status(404).json({ error: 'poll not found' });
-  // keep existing string options, add string or object
-  const exists = poll.options.some(o => (typeof o === 'string' ? o === option : o.name === option));
-  if (!exists) {
+  if (!hasOption(poll, option)) {
     poll.options.push(option);
     safeWriteJSON(POLLS_FILE, data);
   }
@@ -154,8 +180,7 @@ app.post('/admin/addOptionWithImage', upload.single('image'), (req, res) => {
     imagePath = '/uploads/' + req.file.filename;
   }
   const optionObj = { name, image: imagePath };
-  const exists = poll.options.some(o => (typeof o === 'string' ? o === name : o.name === name));
-  if (!exists) {
+  if (!hasOption(poll, name)) {
     poll.options.push(optionObj);
     safeWriteJSON(POLLS_FILE, data);
   }
@@ -169,7 +194,7 @@ app.post('/admin/removeOption', (req, res) => {
   const data = safeReadJSON(POLLS_FILE, { polls: [] });
   const poll = data.polls.find(p => p.id === pollId);
   if (!poll) return res.status(404).json({ error: 'poll not found' });
-  poll.options = poll.options.filter(o => o !== option);
+  poll.options = poll.options.filter(o => getOptionName(o) !== option);
   safeWriteJSON(POLLS_FILE, data);
   res.json({ success: true, poll });
 });
@@ -181,4 +206,5 @@ app.post('/admin/resetVotes', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server started on http://localhost:${PORT}`));
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => console.log(`Server started on http://${HOST}:${PORT}`));

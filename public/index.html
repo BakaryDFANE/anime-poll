@@ -4,23 +4,28 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sondage anime (anonyme)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <main class="container">
-    <header id="titleWrap">
-      <h1 id="siteTitle">Sondage Animes</h1>
-      <p class="subtitle">Votez anonymement pour votre anime préféré.</p>
+<body class="public-page">
+  <main class="public-shell">
+    <header id="titleWrap" class="hero-panel">
+      <div class="hero-kicker">ANIME POLL // LIVE MATCH</div>
+      <h1 id="siteTitle" data-text="Sondage Animes">Sondage Animes</h1>
+      <p class="subtitle">Vote anonymement pour ton anime préféré et regarde le classement s'allumer en direct.</p>
     </header>
 
-    <section id="pollArea">
-      <div id="loading">Chargement du sondage…</div>
+    <section id="pollArea" class="vote-zone" aria-live="polite">
+      <div id="loading" class="loading-panel">Chargement du sondage...</div>
     </section>
 
-    <section id="resultsArea" hidden>
-      <h2>Résultats</h2>
+    <section id="resultsArea" class="results-panel" hidden>
+      <div class="section-label">Résultats</div>
+      <h2>Classement actuel</h2>
       <div id="results"></div>
-      <button id="newVote">Voter à nouveau</button>
+      <button id="newVote" class="primary">Voter à nouveau</button>
     </section>
   </main>
   <script src="app.js"></script>

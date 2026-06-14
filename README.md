@@ -2,51 +2,73 @@
 
 Site simple + serveur Node.js pour recenser anonymement des votes.
 
-Install:
+## Installation
 
 ```bash
 cd "c:\Users\faneb\OneDrive\Documents\anime-poll"
 npm install
 ```
 
-Lancer:
+## Lancer en local
 
 ```bash
 npm start
 ```
 
-Le site sera disponible sur `http://localhost:3000`.
+Sur le PC, le site sera disponible sur `http://localhost:3000`.
 
-Notes:
-- Les votes sont stockés dans `votes.json` sans informations personnelles (anonymes).
-- Pour réinitialiser, videz `votes.json`.
+Sur le même Wi-Fi, les autres appareils peuvent utiliser `http://<votre-ip>:3000`, par exemple `http://192.168.1.42:3000`.
 
-Accès admin:
-- Le serveur supporte des endpoints d'administration protégés par une clé (`ADMIN_KEY`). Par défaut la clé est `change-me-please`. Pour définir une clé sûre avant de démarrer le serveur :
+## Accès depuis internet
+
+Pour que des personnes hors de votre Wi-Fi accèdent au site, il faut une URL publique. 
+
+### Déploiement sur Vercel (recommandé)
+
+Le projet est configuré pour Vercel:
+
+1. Créez un compte gratuit sur [vercel.com](https://vercel.com)
+2. Connectez votre dépôt GitHub (`BakaryDFANE/anime-poll`)
+3. Vercel déploiera automatiquement votre site
+4. Dans les **Settings** du projet Vercel, ajoutez les variables d'environnement:
+   - `ADMIN_USER`: `Bakary D Fane`
+   - `ADMIN_PASS`: `2008BFane`
+   - `SESSION_SECRET`: une valeur secrète longue
+
+⚠️ **Limitation Vercel**: Les données (votes.json, images) ne persistes pas entre les déploiements. Pour une persistance durable, intégrez une base de données comme MongoDB ou PostgreSQL.
+
+### Autres hébergeurs
+
+Vous pouvez aussi déployer sur Render, Railway, Fly.io ou Heroku. Le projet est prêt pour ce type de déploiement:
+
+- `Procfile` lance `node server.js`
+- le serveur utilise `process.env.PORT`
+- le serveur écoute sur `0.0.0.0`
+
+Après déploiement, l'hébergeur donnera une URL du type `https://votre-app.onrender.com`.
+
+## Accès admin
+
+Par défaut:
+
+- Utilisateur: `Bakary D Fane`
+- Mot de passe: `2008BFane`
+
+Avant de rendre le site public, configurez ces variables sur l'hébergeur:
+
+- `ADMIN_USER`
+- `ADMIN_PASS`
+- `SESSION_SECRET`
+
+Exemple en local avec PowerShell:
 
 ```powershell
-setx ADMIN_KEY "ma-cle-secrete"
-# puis relancer le terminal pour prendre effet
+setx ADMIN_USER "Bakary D Fane"
+setx ADMIN_PASS "2008BFane"
+setx SESSION_SECRET "une-longue-valeur-secrete"
 ```
 
-Ensuite ouvrez `http://<votre-ip>:3000/admin.html` et entrez la clé pour ajouter/supprimer des options ou réinitialiser les votes.
+## Notes
 
-Partage mobile (accès depuis téléphone):
-- Pour que vos amis accèdent depuis leur téléphone sur le même réseau local, donnez-leur l'adresse `http://<votre-ip>:3000` (remplacez `<votre-ip>` par l'IP locale de votre PC, par exemple `192.168.1.42`).
-- Si vous voulez un lien accessible depuis internet, vous devrez configurer le transfert de port (port forwarding) sur votre routeur ou héberger l'app sur un service cloud (Heroku, Render, Fly, etc.).
-
-Sécurité:
-- Cette implémentation utilise une clé simple en variable d'environnement. Ne l'exposez pas publiquement. Pour usage public, utilisez HTTPS, authentification solide et une base de données sécurisée.
-
-Déploiement rapide (Render / Heroku / services similaires):
-
-1) Poussez le projet sur GitHub.
-2) Connectez le dépôt à Render (ou Heroku). Configurez les variables d'environnement sur la plateforme :
-
- - `ADMIN_USER` : nom d'utilisateur admin (ex: admin)
- - `ADMIN_PASS` : mot de passe admin sécurisé
- - `SESSION_SECRET` : secret de session
-
-Render détecte `Procfile` et lancera `node server.js`. Après le déploiement, vous obtiendrez une URL publique que vous pourrez partager avec vos amis.
-
-Remarque : pour un usage personnel sur votre réseau local, partagez `http://<votre-ip>:3000`.
+- Les votes sont stockés dans `votes.json`.
+- Sur un hébergeur gratuit, les fichiers JSON peuvent être réinitialisés lors d'un redémarrage ou d'un redéploiement. Pour garder les votes durablement, il faudra ensuite ajouter une base de données.
