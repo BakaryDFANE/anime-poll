@@ -6,6 +6,7 @@ function optionName(opt) {
 
 async function fetchPoll(){
   const res = await fetch('/polls');
+  if (!res.ok) throw new Error(`Server error (${res.status})`);
   const data = await res.json();
   return data.polls && data.polls[0];
 }
@@ -45,7 +46,13 @@ window.addEventListener('load', async ()=>{
   addBtn.addEventListener('click', async ()=>{
     const opt = newOpt.value.trim();
     if(!opt) return alert('Entrez une option');
-    const poll = await fetchPoll();
+    let poll;
+    try {
+      poll = await fetchPoll();
+    } catch (err) {
+      alert('Erreur: impossible de charger le sondage');
+      return;
+    }
     if(!poll) return alert('Aucun sondage disponible');
 
     const fileInput = document.getElementById('optionImage');
@@ -82,7 +89,12 @@ window.addEventListener('load', async ()=>{
   });
 
   logoutBtn.addEventListener('click', async ()=>{
-    await fetch('/admin/logout',{method:'POST',credentials:'include'});
+    try {
+      const resp = await fetch('/admin/logout',{method:'POST',credentials:'include'});
+      if (!resp.ok) console.error('Logout request failed:', resp.status);
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
     editor.hidden = true; document.getElementById('loginArea').hidden = false;
   });
 

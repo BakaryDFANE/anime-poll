@@ -17,6 +17,11 @@ const multer = require('multer');
 const os = require('os');
 const fs = require('fs');
 
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  console.error('Missing required environment variables: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set');
+  process.exit(1);
+}
+
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -91,6 +96,7 @@ app.get('/polls', async (req, res) => {
     const data = await getPolls();
     res.json(data);
   } catch (e) {
+    console.error('GET /polls error:', e);
     res.status(500).json({ error: 'failed to read polls' });
   }
 });
@@ -111,6 +117,7 @@ app.get('/results', async (req, res) => {
     });
     res.json({ results });
   } catch (e) {
+    console.error('GET /results error:', e);
     res.status(500).json({ error: 'failed to read results' });
   }
 });
@@ -173,6 +180,7 @@ app.post('/admin/addPoll', async (req, res) => {
     await savePolls(data);
     res.json({ success: true, poll: newPoll });
   } catch (e) {
+    console.error('POST /admin/addPoll error:', e);
     res.status(500).json({ error: 'failed to create poll' });
   }
 });
@@ -188,6 +196,7 @@ app.post('/admin/deletePoll', async (req, res) => {
     await savePolls(data);
     res.json({ success: true });
   } catch (e) {
+    console.error('POST /admin/deletePoll error:', e);
     res.status(500).json({ error: 'failed to delete poll' });
   }
 });
@@ -206,6 +215,7 @@ app.post('/admin/addOption', async (req, res) => {
     }
     res.json({ success: true, poll });
   } catch (e) {
+    console.error('POST /admin/addOption error:', e);
     res.status(500).json({ error: 'failed to add option' });
   }
 });
@@ -227,6 +237,7 @@ app.post('/admin/addOptionWithImage', upload.single('image'), async (req, res) =
     }
     res.json({ success: true, poll });
   } catch (e) {
+    console.error('POST /admin/addOptionWithImage error:', e);
     res.status(500).json({ error: 'failed to add option with image' });
   }
 });
@@ -243,6 +254,7 @@ app.post('/admin/removeOption', async (req, res) => {
     await savePolls(data);
     res.json({ success: true, poll });
   } catch (e) {
+    console.error('POST /admin/removeOption error:', e);
     res.status(500).json({ error: 'failed to remove option' });
   }
 });
@@ -253,11 +265,18 @@ app.post('/admin/resetVotes', async (req, res) => {
     await saveVotes({ votes: [] });
     res.json({ success: true });
   } catch (e) {
+    console.error('POST /admin/resetVotes error:', e);
     res.status(500).json({ error: 'failed to reset votes' });
   }
 });
 
 app.use((err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large (max 2 MB)' });
+  }
+  if (err && err.message === 'Only image uploads are allowed') {
+    return res.status(400).json({ error: err.message });
+  }
   console.error('Unhandled error:', err && err.stack ? err.stack : err);
   if (res.headersSent) return next(err);
   res.status(500).json({ error: 'internal server error' });
@@ -266,7 +285,15 @@ app.use((err, req, res, next) => {
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   const HOST = process.env.HOST || '0.0.0.0';
-  app.listen(PORT, HOST, () => console.log(`Server started on http://${HOST}:${PORT}`));
+  const server = app.listen(PORT, HOST, () => console.log(`Server started on http://${HOST}:${PORT}`));
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use`);
+    } else {
+      console.error('Server failed to start:', err);
+    }
+    process.exit(1);
+  });
 }
 
 module.exports = app;

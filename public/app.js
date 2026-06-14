@@ -19,6 +19,7 @@ async function loadPoll(){
   const loading = document.getElementById('loading');
   try{
     const resp = await fetch('/polls');
+    if (!resp.ok) throw new Error(`Server error (${resp.status})`);
     const data = await resp.json();
     const poll = data.polls && data.polls[0];
     if(!poll) { area.innerHTML = '<p class="empty-state">Aucun sondage disponible.</p>'; return; }
@@ -89,15 +90,22 @@ async function loadPoll(){
       const option = formData.get('choice');
       btn.disabled = true;
       btn.textContent = 'Transmission...';
-      const voteResp = await fetch('/vote', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pollId:poll.id, option})});
-      if (!voteResp.ok) {
-        const error = await voteResp.json().catch(() => ({ error: 'Erreur inconnue' }));
-        alert(error.error || "Impossible d'enregistrer le vote");
+      try {
+        const voteResp = await fetch('/vote', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pollId:poll.id, option})});
+        if (!voteResp.ok) {
+          const error = await voteResp.json().catch(() => ({ error: 'Erreur inconnue' }));
+          alert(error.error || "Impossible d'enregistrer le vote");
+          btn.disabled = false;
+          btn.textContent = 'Verrouiller le vote';
+          return;
+        }
+        showResults();
+      } catch (err) {
+        console.error('Vote submission failed:', err);
+        alert('Erreur réseau — vérifiez votre connexion.');
         btn.disabled = false;
         btn.textContent = 'Verrouiller le vote';
-        return;
       }
-      showResults();
     });
 
     card.appendChild(form);
@@ -116,6 +124,7 @@ async function showResults(){
   const resultsDiv = await $('#results');
   try{
     const resp = await fetch('/results');
+    if (!resp.ok) throw new Error(`Server error (${resp.status})`);
     const data = await resp.json();
     const res = data.results && data.results[0];
     if(!res){ resultsDiv.innerHTML='<p class="empty-state">Aucun résultat.</p>'; return; }
@@ -149,7 +158,11 @@ async function showResults(){
     resArea.hidden = false;
     resArea.scrollIntoView({behavior:'smooth', block:'start'});
     document.getElementById('newVote').onclick = ()=>{ resArea.hidden = true; loadPoll(); document.getElementById('pollArea').scrollIntoView({behavior:'smooth'}); };
-  }catch(err){ console.error(err); }
+  }catch(err){
+    console.error('Results loading failed:', err);
+    resultsDiv.innerHTML = '<p class="empty-state">Erreur lors du chargement des résultats.</p>';
+    resArea.hidden = false;
+  }
 }
 
 window.addEventListener('load', ()=>{ loadPoll(); });
