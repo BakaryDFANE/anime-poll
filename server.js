@@ -45,6 +45,26 @@ function saveVotes(d)     { return redisSetJson(VOTES_KEY, d); }
 function getComments()    { return redisGetJson(COMMENTS_KEY, { comments: [] }); }
 function saveComments(d)  { return redisSetJson(COMMENTS_KEY, d); }
 
+// ─── Auto-seed polls from polls.json if Redis is empty ────────────────────────
+
+async function seedPollsIfEmpty() {
+  try {
+    const data = await getPolls();
+    if (data.polls && data.polls.length > 0) return;
+    const seedPath = path.join(__dirname, 'polls.json');
+    if (!fs.existsSync(seedPath)) return;
+    const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+    if (seed.polls && seed.polls.length > 0) {
+      await savePolls(seed);
+      console.log('Seeded ' + seed.polls[0].options.length + ' options from polls.json');
+    }
+  } catch (err) {
+    console.error('Seed error:', err);
+  }
+}
+
+seedPollsIfEmpty();
+
 // ─── Uploads ──────────────────────────────────────────────────────────────────
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || (process.env.NODE_ENV === 'production'
