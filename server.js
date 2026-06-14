@@ -98,8 +98,8 @@ app.post('/vote', (req, res) => {
 });
 
 // --- Admin authentication and endpoints ---
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || process.env.ADMIN_KEY || 'change-me-please';
+const ADMIN_USER = process.env.ADMIN_USER || 'Bakary D Fane';
+const ADMIN_PASS = process.env.ADMIN_PASS || process.env.ADMIN_KEY || '2008BFane';
 
 function isAdminSession(req) {
   return req.session && req.session.isAdmin;
