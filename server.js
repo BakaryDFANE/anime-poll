@@ -12,23 +12,18 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session middleware for admin auth
 const session = require('express-session');
 const multer = require('multer');
 const os = require('os');
 const fs = require('fs');
 
-// ─── Upstash Redis client ────────────────────────────────────────────────────
-// Set these two env vars in your Vercel dashboard:
-//   UPSTASH_REDIS_REST_URL
-//   UPSTASH_REDIS_REST_TOKEN
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-const POLLS_KEY = 'polls';   // stores { polls: [...] }
-const VOTES_KEY = 'votes';   // stores { votes: [...] }
+const POLLS_KEY = 'polls';
+const VOTES_KEY = 'votes';
 
 async function getPolls() {
   const data = await redis.get(POLLS_KEY);
@@ -49,19 +44,14 @@ async function getVotes() {
 async function saveVotes(data) {
   await redis.set(VOTES_KEY, JSON.stringify(data));
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
-// ensure uploads folder exists; on production serverless use system tmp
 const UPLOADS_DIR = process.env.UPLOADS_DIR || (process.env.NODE_ENV === 'production'
   ? path.join(os.tmpdir(), 'uploads')
   : path.join(__dirname, 'public', 'uploads'));
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-// multer setup
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOADS_DIR);
-  },
+  destination: function (req, file, cb) { cb(null, UPLOADS_DIR); },
   filename: function (req, file, cb) {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
@@ -84,22 +74,15 @@ app.use(session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
-  }
+  cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
 }));
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 function getOptionName(option) {
   return typeof option === 'string' ? option : option && option.name;
 }
-
 function hasOption(poll, optionName) {
   return poll.options.some(option => getOptionName(option) === optionName);
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Public routes ────────────────────────────────────────────────────────────
 
@@ -115,21 +98,17 @@ app.get('/polls', async (req, res) => {
 app.get('/results', async (req, res) => {
   try {
     const [pollsData, votesData] = await Promise.all([getPolls(), getVotes()]);
-    const polls = pollsData.polls;
-    const votes = votesData.votes;
-
-    const results = polls.map(poll => {
+    const results = pollsData.polls.map(poll => {
       const counts = {};
       poll.options.forEach(opt => {
         const name = getOptionName(opt);
         if (name) counts[name] = 0;
       });
-      votes.filter(v => v.pollId === poll.id).forEach(v => {
+      votesData.votes.filter(v => v.pollId === poll.id).forEach(v => {
         if (counts.hasOwnProperty(v.option)) counts[v.option]++;
       });
       return { pollId: poll.id, title: poll.title, counts };
     });
-
     res.json({ results });
   } catch (e) {
     res.status(500).json({ error: 'failed to read results' });
@@ -139,17 +118,14 @@ app.get('/results', async (req, res) => {
 app.post('/vote', async (req, res) => {
   const { pollId, option } = req.body;
   if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
-
   try {
     const pollsData = await getPolls();
     const poll = pollsData.polls.find(p => p.id === pollId);
     if (!poll) return res.status(404).json({ error: 'Poll not found' });
     if (!hasOption(poll, option)) return res.status(400).json({ error: 'Invalid option' });
-
     const votesObj = await getVotes();
     votesObj.votes.push({ pollId, option, ts: Date.now() });
     await saveVotes(votesObj);
-
     res.json({ success: true });
   } catch (e) {
     console.error('Vote error:', e);
@@ -157,14 +133,12 @@ app.post('/vote', async (req, res) => {
   }
 });
 
-// ─── Admin authentication ─────────────────────────────────────────────────────
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
 const ADMIN_USER = process.env.ADMIN_USER || 'Bakary D Fane';
 const ADMIN_PASS = process.env.ADMIN_PASS || process.env.ADMIN_KEY || '2008BFane';
 
-function isAdminSession(req) {
-  return req.session && req.session.isAdmin;
-}
-
+function isAdminSession(req) { return req.session && req.session.isAdmin; }
 function checkAdmin(req) {
   const key = req.query.key || req.headers['x-admin-key'] || '';
   return isAdminSession(req) || key === ADMIN_PASS;
@@ -184,11 +158,44 @@ app.post('/admin/logout', (req, res) => {
   res.json({ success: true });
 });
 
+// ── Nouvelle route : créer un sondage complet ──
+app.post('/admin/addPoll', async (req, res) => {
+  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
+  const { id, title, options } = req.body;
+  if (!id || !title) return res.status(400).json({ error: 'id and title required' });
+  try {
+    const data = await getPolls();
+    if (data.polls.find(p => p.id === id)) {
+      return res.status(400).json({ error: 'poll with this id already exists' });
+    }
+    const newPoll = { id, title, options: options || [] };
+    data.polls.push(newPoll);
+    await savePolls(data);
+    res.json({ success: true, poll: newPoll });
+  } catch (e) {
+    res.status(500).json({ error: 'failed to create poll' });
+  }
+});
+
+// ── Nouvelle route : supprimer un sondage ──
+app.post('/admin/deletePoll', async (req, res) => {
+  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
+  const { pollId } = req.body;
+  if (!pollId) return res.status(400).json({ error: 'pollId required' });
+  try {
+    const data = await getPolls();
+    data.polls = data.polls.filter(p => p.id !== pollId);
+    await savePolls(data);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'failed to delete poll' });
+  }
+});
+
 app.post('/admin/addOption', async (req, res) => {
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
   const { pollId, option } = req.body;
   if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
-
   try {
     const data = await getPolls();
     const poll = data.polls.find(p => p.id === pollId);
@@ -207,15 +214,12 @@ app.post('/admin/addOptionWithImage', upload.single('image'), async (req, res) =
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
   const { pollId, name } = req.body;
   if (!pollId || !name) return res.status(400).json({ error: 'pollId and name required' });
-
   try {
     const data = await getPolls();
     const poll = data.polls.find(p => p.id === pollId);
     if (!poll) return res.status(404).json({ error: 'poll not found' });
     let imagePath = null;
-    if (req.file) {
-      imagePath = '/uploads/' + req.file.filename;
-    }
+    if (req.file) imagePath = '/uploads/' + req.file.filename;
     const optionObj = { name, image: imagePath };
     if (!hasOption(poll, name)) {
       poll.options.push(optionObj);
@@ -231,7 +235,6 @@ app.post('/admin/removeOption', async (req, res) => {
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
   const { pollId, option } = req.body;
   if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
-
   try {
     const data = await getPolls();
     const poll = data.polls.find(p => p.id === pollId);
@@ -254,14 +257,12 @@ app.post('/admin/resetVotes', async (req, res) => {
   }
 });
 
-// ─── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err && err.stack ? err.stack : err);
   if (res.headersSent) return next(err);
   res.status(500).json({ error: 'internal server error' });
 });
 
-// Local dev: listen on port. Vercel: export the app.
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   const HOST = process.env.HOST || '0.0.0.0';
