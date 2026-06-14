@@ -415,6 +415,7 @@ button.ghost{
   align-items:center;
   gap:10px;
   margin:8px 0;
+  flex-wrap:wrap;
 }
 
 .admin-option img{
@@ -424,8 +425,68 @@ button.ghost{
   border-radius:6px;
 }
 
-.admin-option button{
+.admin-option-actions{
   margin-left:auto;
+  display:flex;
+  gap:6px;
+}
+
+.edit-btn{
+  color:var(--cyan) !important;
+  border-color:var(--cyan) !important;
+}
+
+.edit-form{
+  width:100%;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:12px;
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.edit-form label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:13px;
+  color:var(--muted);
+}
+
+.edit-form input[type="text"]{
+  background:var(--panel);
+  border:1px solid var(--line);
+  color:var(--ink);
+  padding:8px 10px;
+  border-radius:4px;
+  font-size:14px;
+}
+
+.edit-form input[type="file"]{
+  font-size:13px;
+  color:var(--muted);
+}
+
+.edit-preview{
+  width:60px;
+  height:60px;
+  object-fit:cover;
+  border-radius:6px;
+  border:1px solid var(--line);
+}
+
+.edit-btn-row{
+  display:flex;
+  gap:8px;
+  margin-top:4px;
+}
+
+.edit-btn-row button{
+  font-size:13px;
+  padding:6px 14px;
 }
 
 @media (max-width:760px){

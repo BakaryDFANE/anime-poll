@@ -112,6 +112,15 @@ window.addEventListener('load', async function () {
       label.textContent = name;
       li.appendChild(label);
 
+      var actions = document.createElement('div');
+      actions.className = 'admin-option-actions';
+
+      var editBtn = document.createElement('button'); editBtn.textContent = 'Modifier'; editBtn.className = 'ghost edit-btn';
+      editBtn.addEventListener('click', function () {
+        showEditForm(li, poll, name, opt);
+      });
+      actions.appendChild(editBtn);
+
       var rem = document.createElement('button'); rem.textContent = 'Supprimer'; rem.className = 'ghost';
       rem.addEventListener('click', async function () {
         if (!confirm('Supprimer "' + name + '" ?')) return;
@@ -123,10 +132,80 @@ window.addEventListener('load', async function () {
           alert('Erreur: ' + err.message);
         }
       });
-      li.appendChild(rem);
+      actions.appendChild(rem);
+      li.appendChild(actions);
       list.appendChild(li);
     });
     current.appendChild(list);
+  }
+
+  function showEditForm(li, poll, oldName, opt) {
+    var existing = li.querySelector('.edit-form');
+    if (existing) { existing.remove(); return; }
+
+    var form = document.createElement('div');
+    form.className = 'edit-form';
+
+    var nameLabel = document.createElement('label');
+    nameLabel.textContent = 'Nom ';
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = oldName;
+    nameInput.placeholder = 'Nouveau nom';
+    nameLabel.appendChild(nameInput);
+    form.appendChild(nameLabel);
+
+    var imgLabel = document.createElement('label');
+    imgLabel.textContent = 'Image ';
+    var imgInput = document.createElement('input');
+    imgInput.type = 'file';
+    imgInput.accept = 'image/*';
+    imgLabel.appendChild(imgInput);
+    form.appendChild(imgLabel);
+
+    if (typeof opt === 'object' && opt.image) {
+      var preview = document.createElement('img');
+      preview.src = opt.image;
+      preview.alt = 'Image actuelle';
+      preview.className = 'edit-preview';
+      form.appendChild(preview);
+    }
+
+    var btnRow = document.createElement('div');
+    btnRow.className = 'edit-btn-row';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Enregistrer';
+    saveBtn.className = 'primary';
+    saveBtn.addEventListener('click', async function () {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Sauvegarde...';
+      try {
+        var fd = new FormData();
+        fd.append('pollId', poll.id);
+        fd.append('oldName', oldName);
+        var newName = nameInput.value.trim();
+        if (newName && newName !== oldName) fd.append('newName', newName);
+        if (imgInput.files && imgInput.files.length > 0) fd.append('image', imgInput.files[0]);
+        var resp = await fetch('/admin/editOption', { method: 'POST', credentials: 'include', body: fd });
+        var data = await readJsonResponse(resp);
+        renderPoll(data.poll);
+      } catch (err) {
+        alert('Erreur: ' + err.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Enregistrer';
+      }
+    });
+    btnRow.appendChild(saveBtn);
+
+    var cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Annuler';
+    cancelBtn.className = 'ghost';
+    cancelBtn.addEventListener('click', function () { form.remove(); });
+    btnRow.appendChild(cancelBtn);
+
+    form.appendChild(btnRow);
+    li.appendChild(form);
   }
 
   async function loadAdminComments() {

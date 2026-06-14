@@ -281,6 +281,23 @@ app.post('/admin/addOptionWithImage', requireAdmin, upload.single('image'), asyn
   });
 }));
 
+app.post('/admin/editOption', requireAdmin, upload.single('image'), asyncHandler(async (req, res) => {
+  const { pollId, oldName, newName } = req.body;
+  if (!pollId || !oldName) return res.status(400).json({ error: 'pollId and oldName required' });
+  const data = await getPolls();
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll) return res.status(404).json({ error: 'poll not found' });
+  const idx = poll.options.findIndex(o => getOptionName(o) === oldName);
+  if (idx === -1) return res.status(404).json({ error: 'option not found' });
+  const current = poll.options[idx];
+  const name = (newName && newName.trim()) || getOptionName(current);
+  let image = typeof current === 'object' ? current.image : null;
+  if (req.file) image = '/uploads/' + req.file.filename;
+  poll.options[idx] = { name, image };
+  await savePolls(data);
+  res.json({ success: true, poll });
+}));
+
 app.post('/admin/removeOption', requireAdmin, asyncHandler(async (req, res) => {
   await withPoll(req, res, async () => {
     const { option } = req.body;
