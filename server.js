@@ -11,6 +11,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Session middleware for admin auth
 const session = require('express-session');
+const multer = require('multer');
+
+// ensure uploads folder exists
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// multer setup
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + unique + ext);
+  }
+});
+const upload = multer({ storage });
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change';
 app.use(session({ secret: SESSION_SECRET, resave: false, saveUninitialized: false, cookie: { secure: false } }));
 
@@ -49,7 +67,11 @@ app.get('/results', (req, res) => {
 
   const results = polls.map(poll => {
     const counts = {};
-    poll.options.forEach(opt => counts[opt] = 0);
+    // option may be string or object { name, image }
+    poll.options.forEach(opt => {
+      const name = typeof opt === 'string' ? opt : opt.name;
+      counts[name] = 0;
+    });
     votes.filter(v => v.pollId === poll.id).forEach(v => {
       if (counts.hasOwnProperty(v.option)) counts[v.option]++;
     });
@@ -110,8 +132,31 @@ app.post('/admin/addOption', (req, res) => {
   const data = safeReadJSON(POLLS_FILE, { polls: [] });
   const poll = data.polls.find(p => p.id === pollId);
   if (!poll) return res.status(404).json({ error: 'poll not found' });
-  if (!poll.options.includes(option)) {
+  // keep existing string options, add string or object
+  const exists = poll.options.some(o => (typeof o === 'string' ? o === option : o.name === option));
+  if (!exists) {
     poll.options.push(option);
+    safeWriteJSON(POLLS_FILE, data);
+  }
+  res.json({ success: true, poll });
+});
+
+// add option with image upload
+app.post('/admin/addOptionWithImage', upload.single('image'), (req, res) => {
+  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
+  const { pollId, name } = req.body;
+  if (!pollId || !name) return res.status(400).json({ error: 'pollId and name required' });
+  const data = safeReadJSON(POLLS_FILE, { polls: [] });
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll) return res.status(404).json({ error: 'poll not found' });
+  let imagePath = null;
+  if (req.file) {
+    imagePath = '/uploads/' + req.file.filename;
+  }
+  const optionObj = { name, image: imagePath };
+  const exists = poll.options.some(o => (typeof o === 'string' ? o === name : o.name === name));
+  if (!exists) {
+    poll.options.push(optionObj);
     safeWriteJSON(POLLS_FILE, data);
   }
   res.json({ success: true, poll });

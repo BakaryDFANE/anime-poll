@@ -35,11 +35,24 @@ window.addEventListener('load', async ()=>{
     const opt = newOpt.value.trim();
     if(!opt) return alert('Entrez une option');
     const poll = await fetchPoll();
-    const resp = await fetch('/admin/addOption',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({pollId:poll.id, option:opt})});
-    const data = await resp.json();
-    if(data.error) return alert('Erreur: '+data.error);
-    renderPoll(data.poll);
-    newOpt.value = '';
+    const fileInput = document.getElementById('optionImage');
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      const form = new FormData();
+      form.append('image', fileInput.files[0]);
+      form.append('name', opt);
+      form.append('pollId', poll.id);
+      const resp = await fetch('/admin/addOptionWithImage',{method:'POST',credentials:'include',body:form});
+      const data = await resp.json();
+      if(data.error) return alert('Erreur: '+data.error);
+      renderPoll(data.poll);
+      newOpt.value = ''; fileInput.value = '';
+    } else {
+      const resp = await fetch('/admin/addOption',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({pollId:poll.id, option:opt})});
+      const data = await resp.json();
+      if(data.error) return alert('Erreur: '+data.error);
+      renderPoll(data.poll);
+      newOpt.value = '';
+    }
   });
 
   resetBtn.addEventListener('click', async ()=>{

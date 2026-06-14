@@ -17,8 +17,14 @@ async function loadPoll(){
     const form = document.createElement('form'); form.id='voteForm';
     poll.options.forEach((opt, idx) => {
       const row = document.createElement('label'); row.className='option';
-      const input = document.createElement('input'); input.type='radio'; input.name='choice'; input.value=opt; if(idx===0) input.checked=true;
-      const txt = document.createElement('span'); txt.textContent=opt;
+      const input = document.createElement('input'); input.type='radio'; input.name='choice';
+      const optionName = (typeof opt === 'string') ? opt : opt.name;
+      input.value = optionName; if(idx===0) input.checked=true;
+      const txt = document.createElement('span'); txt.textContent = optionName;
+      if (typeof opt === 'object' && opt.image) {
+        const img = document.createElement('img'); img.src = opt.image; img.alt = optionName; img.style.height='48px'; img.style.marginRight='10px'; img.style.borderRadius='6px';
+        row.appendChild(img);
+      }
       row.appendChild(input); row.appendChild(txt);
       form.appendChild(row);
     });
