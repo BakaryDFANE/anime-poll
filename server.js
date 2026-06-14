@@ -2,14 +2,18 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const crypto = require('crypto');
 const { Redis } = require('@upstash/redis');
 
 const app = express();
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
   : false;
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '100kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const session = require('express-session');
@@ -58,20 +62,28 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + unique + ext);
   }
 });
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: function (req, file, cb) {
-    if (!file.mimetype || !file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image uploads are allowed'));
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_IMAGE_MIMES.includes(file.mimetype) || !ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
+      return cb(new Error('Only JPEG, PNG, GIF, and WebP image uploads are allowed'));
     }
     cb(null, true);
   }
 });
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change';
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('FATAL: SESSION_SECRET environment variable is required in production');
+  process.exit(1);
+}
+const sessionSecret = SESSION_SECRET || 'dev-only-insecure-secret-' + crypto.randomBytes(16).toString('hex');
 app.use(session({
-  secret: SESSION_SECRET,
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
@@ -115,9 +127,31 @@ app.get('/results', async (req, res) => {
   }
 });
 
+const voteRateLimit = new Map();
+const VOTE_WINDOW_MS = 60 * 1000;
+const MAX_VOTES_PER_WINDOW = 5;
+
 app.post('/vote', async (req, res) => {
   const { pollId, option } = req.body;
   if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
+  if (typeof pollId !== 'string' || typeof option !== 'string') {
+    return res.status(400).json({ error: 'pollId and option must be strings' });
+  }
+  if (pollId.length > 100 || option.length > 200) {
+    return res.status(400).json({ error: 'input too long' });
+  }
+
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = voteRateLimit.get(ip) || { count: 0, windowStart: now };
+  if (now - record.windowStart > VOTE_WINDOW_MS) {
+    record.count = 0;
+    record.windowStart = now;
+  }
+  if (record.count >= MAX_VOTES_PER_WINDOW) {
+    return res.status(429).json({ error: 'too many votes, please wait' });
+  }
+
   try {
     const pollsData = await getPolls();
     const poll = pollsData.polls.find(p => p.id === pollId);
@@ -126,6 +160,8 @@ app.post('/vote', async (req, res) => {
     const votesObj = await getVotes();
     votesObj.votes.push({ pollId, option, ts: Date.now() });
     await saveVotes(votesObj);
+    record.count++;
+    voteRateLimit.set(ip, record);
     res.json({ success: true });
   } catch (e) {
     console.error('Vote error:', e);
@@ -135,21 +171,63 @@ app.post('/vote', async (req, res) => {
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
-const ADMIN_USER = process.env.ADMIN_USER || 'Bakary D Fane';
-const ADMIN_PASS = process.env.ADMIN_PASS || process.env.ADMIN_KEY || '2008BFane';
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
+if (process.env.NODE_ENV === 'production' && (!ADMIN_USER || !ADMIN_PASS)) {
+  console.error('FATAL: ADMIN_USER and ADMIN_PASS environment variables are required in production');
+  process.exit(1);
+}
 
 function isAdminSession(req) { return req.session && req.session.isAdmin; }
 function checkAdmin(req) {
-  const key = req.query.key || req.headers['x-admin-key'] || '';
-  return isAdminSession(req) || key === ADMIN_PASS;
+  return isAdminSession(req);
 }
 
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, Buffer.alloc(bufA.length));
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+const loginAttempts = new Map();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const MAX_LOGIN_ATTEMPTS = 10;
+
 app.post('/admin/login', (req, res) => {
+  if (!ADMIN_USER || !ADMIN_PASS) {
+    return res.status(503).json({ error: 'admin credentials not configured' });
+  }
+
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = loginAttempts.get(ip) || { count: 0, firstAttempt: now };
+
+  if (now - record.firstAttempt > LOGIN_WINDOW_MS) {
+    record.count = 0;
+    record.firstAttempt = now;
+  }
+
+  if (record.count >= MAX_LOGIN_ATTEMPTS) {
+    return res.status(429).json({ error: 'too many login attempts, try again later' });
+  }
+
   const { user, pass } = req.body || {};
-  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+  const userValid = timingSafeEqual(String(user || ''), ADMIN_USER);
+  const passValid = timingSafeEqual(String(pass || ''), ADMIN_PASS);
+
+  if (userValid && passValid) {
+    loginAttempts.delete(ip);
     req.session.isAdmin = true;
     return res.json({ success: true });
   }
+
+  record.count++;
+  loginAttempts.set(ip, record);
   res.status(401).json({ error: 'invalid credentials' });
 });
 
@@ -163,6 +241,15 @@ app.post('/admin/addPoll', async (req, res) => {
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
   const { id, title, options } = req.body;
   if (!id || !title) return res.status(400).json({ error: 'id and title required' });
+  if (typeof id !== 'string' || typeof title !== 'string') {
+    return res.status(400).json({ error: 'id and title must be strings' });
+  }
+  if (id.length > 100 || title.length > 300) {
+    return res.status(400).json({ error: 'id or title too long' });
+  }
+  if (options && !Array.isArray(options)) {
+    return res.status(400).json({ error: 'options must be an array' });
+  }
   try {
     const data = await getPolls();
     if (data.polls.find(p => p.id === id)) {

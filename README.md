@@ -31,9 +31,9 @@ Le projet est configuré pour Vercel:
 2. Connectez votre dépôt GitHub (`BakaryDFANE/anime-poll`)
 3. Vercel déploiera automatiquement votre site
 4. Dans les **Settings** du projet Vercel, ajoutez les variables d'environnement:
-   - `ADMIN_USER`: `Bakary D Fane`
-   - `ADMIN_PASS`: `2008BFane`
-   - `SESSION_SECRET`: une valeur secrète longue
+   - `ADMIN_USER`: votre nom d'utilisateur admin
+   - `ADMIN_PASS`: un mot de passe fort
+   - `SESSION_SECRET`: une valeur secrète longue (ex: `openssl rand -base64 32`)
 
 ⚠️ **Limitation Vercel**: Les données (votes.json, images) ne persistes pas entre les déploiements. Pour une persistance durable, intégrez une base de données comme MongoDB ou PostgreSQL.
 
@@ -49,23 +49,28 @@ Après déploiement, l'hébergeur donnera une URL du type `https://votre-app.onr
 
 ## Accès admin
 
-Par défaut:
+L'accès admin nécessite les variables d'environnement suivantes :
 
-- Utilisateur: `Bakary D Fane`
-- Mot de passe: `2008BFane`
+- `ADMIN_USER` — nom d'utilisateur admin
+- `ADMIN_PASS` — mot de passe admin (choisissez un mot de passe fort)
+- `SESSION_SECRET` — clé secrète pour signer les sessions (ex: `openssl rand -base64 32`)
 
-Avant de rendre le site public, configurez ces variables sur l'hébergeur:
-
-- `ADMIN_USER`
-- `ADMIN_PASS`
-- `SESSION_SECRET`
+⚠️ **Ne committez jamais vos identifiants dans le code source.**
 
 Exemple en local avec PowerShell:
 
 ```powershell
-setx ADMIN_USER "Bakary D Fane"
-setx ADMIN_PASS "2008BFane"
-setx SESSION_SECRET "une-longue-valeur-secrete"
+setx ADMIN_USER "votre-utilisateur"
+setx ADMIN_PASS "votre-mot-de-passe-fort"
+setx SESSION_SECRET "une-longue-valeur-secrete-generee"
+```
+
+Ou avec un fichier `.env` (inclus dans `.gitignore`) :
+
+```
+ADMIN_USER=votre-utilisateur
+ADMIN_PASS=votre-mot-de-passe-fort
+SESSION_SECRET=une-longue-valeur-secrete-generee
 ```
 
 ## Notes
