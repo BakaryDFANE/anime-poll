@@ -1,9 +1,7 @@
 import json
-from pathlib import Path
-p = Path('render-openapi.json')
-if not p.exists():
-    raise SystemExit('render-openapi.json not found')
-j = json.loads(p.read_text())
+from render_helpers import load_openapi
+
+j = load_openapi()
 serv = j['paths']['/services']['post']
 body = serv['requestBody']['content']['application/json']['schema']
 print(json.dumps({

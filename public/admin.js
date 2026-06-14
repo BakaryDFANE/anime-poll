@@ -1,31 +1,20 @@
-async function $(s){return document.querySelector(s)}
+/* global $, optionName, readJsonResponse, fetchPolls */
 
-function optionName(opt) {
-  return typeof opt === 'string' ? opt : opt && opt.name;
-}
-
-async function fetchPoll(){
-  const res = await fetch('/polls');
-  const data = await res.json();
-  return data.polls && data.polls[0];
-}
-
-async function readJsonResponse(resp) {
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data.error || 'Erreur inconnue');
-  return data;
+async function fetchPoll() {
+  const polls = await fetchPolls();
+  return polls[0];
 }
 
 window.addEventListener('load', async ()=>{
-  const userInput = await $('#adminUser');
-  const passInput = await $('#adminPass');
-  const loginBtn = await $('#loginBtn');
-  const editor = await $('#pollEditor');
-  const current = await $('#currentPoll');
-  const addBtn = await $('#addOption');
-  const newOpt = await $('#newOption');
-  const resetBtn = await $('#resetVotes');
-  const logoutBtn = await $('#logoutBtn');
+  const userInput = $('#adminUser');
+  const passInput = $('#adminPass');
+  const loginBtn = $('#loginBtn');
+  const editor = $('#pollEditor');
+  const current = $('#currentPoll');
+  const addBtn = $('#addOption');
+  const newOpt = $('#newOption');
+  const resetBtn = $('#resetVotes');
+  const logoutBtn = $('#logoutBtn');
 
   loginBtn.addEventListener('click', async ()=>{
     const user = userInput.value.trim() || 'admin';

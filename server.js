@@ -22,28 +22,27 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
+// ─── Redis helpers ────────────────────────────────────────────────────────────
+
 const POLLS_KEY = 'polls';
 const VOTES_KEY = 'votes';
 
-async function getPolls() {
-  const data = await redis.get(POLLS_KEY);
-  if (!data) return { polls: [] };
+async function redisGetJson(key, fallback) {
+  const data = await redis.get(key);
+  if (!data) return fallback;
   return typeof data === 'string' ? JSON.parse(data) : data;
 }
 
-async function savePolls(data) {
-  await redis.set(POLLS_KEY, JSON.stringify(data));
+async function redisSetJson(key, value) {
+  await redis.set(key, JSON.stringify(value));
 }
 
-async function getVotes() {
-  const data = await redis.get(VOTES_KEY);
-  if (!data) return { votes: [] };
-  return typeof data === 'string' ? JSON.parse(data) : data;
-}
+function getPolls()     { return redisGetJson(POLLS_KEY, { polls: [] }); }
+function savePolls(d)   { return redisSetJson(POLLS_KEY, d); }
+function getVotes()     { return redisGetJson(VOTES_KEY, { votes: [] }); }
+function saveVotes(d)   { return redisSetJson(VOTES_KEY, d); }
 
-async function saveVotes(data) {
-  await redis.set(VOTES_KEY, JSON.stringify(data));
-}
+// ─── Uploads ──────────────────────────────────────────────────────────────────
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || (process.env.NODE_ENV === 'production'
   ? path.join(os.tmpdir(), 'uploads')
@@ -69,6 +68,8 @@ const upload = multer({
   }
 });
 
+// ─── Session ──────────────────────────────────────────────────────────────────
+
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change';
 app.use(session({
   secret: SESSION_SECRET,
@@ -77,6 +78,8 @@ app.use(session({
   cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
 }));
 
+// ─── Shared option helpers ────────────────────────────────────────────────────
+
 function getOptionName(option) {
   return typeof option === 'string' ? option : option && option.name;
 }
@@ -84,56 +87,11 @@ function hasOption(poll, optionName) {
   return poll.options.some(option => getOptionName(option) === optionName);
 }
 
-// ─── Public routes ────────────────────────────────────────────────────────────
+// ─── Route utilities ──────────────────────────────────────────────────────────
 
-app.get('/polls', async (req, res) => {
-  try {
-    const data = await getPolls();
-    res.json(data);
-  } catch (e) {
-    res.status(500).json({ error: 'failed to read polls' });
-  }
-});
-
-app.get('/results', async (req, res) => {
-  try {
-    const [pollsData, votesData] = await Promise.all([getPolls(), getVotes()]);
-    const results = pollsData.polls.map(poll => {
-      const counts = {};
-      poll.options.forEach(opt => {
-        const name = getOptionName(opt);
-        if (name) counts[name] = 0;
-      });
-      votesData.votes.filter(v => v.pollId === poll.id).forEach(v => {
-        if (counts.hasOwnProperty(v.option)) counts[v.option]++;
-      });
-      return { pollId: poll.id, title: poll.title, counts };
-    });
-    res.json({ results });
-  } catch (e) {
-    res.status(500).json({ error: 'failed to read results' });
-  }
-});
-
-app.post('/vote', async (req, res) => {
-  const { pollId, option } = req.body;
-  if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
-  try {
-    const pollsData = await getPolls();
-    const poll = pollsData.polls.find(p => p.id === pollId);
-    if (!poll) return res.status(404).json({ error: 'Poll not found' });
-    if (!hasOption(poll, option)) return res.status(400).json({ error: 'Invalid option' });
-    const votesObj = await getVotes();
-    votesObj.votes.push({ pollId, option, ts: Date.now() });
-    await saveVotes(votesObj);
-    res.json({ success: true });
-  } catch (e) {
-    console.error('Vote error:', e);
-    res.status(500).json({ error: 'failed to save vote' });
-  }
-});
-
-// ─── Admin ────────────────────────────────────────────────────────────────────
+function asyncHandler(fn) {
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+}
 
 const ADMIN_USER = process.env.ADMIN_USER || 'Bakary D Fane';
 const ADMIN_PASS = process.env.ADMIN_PASS || process.env.ADMIN_KEY || '2008BFane';
@@ -143,6 +101,60 @@ function checkAdmin(req) {
   const key = req.query.key || req.headers['x-admin-key'] || '';
   return isAdminSession(req) || key === ADMIN_PASS;
 }
+
+function requireAdmin(req, res, next) {
+  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
+  next();
+}
+
+async function withPoll(req, res, next) {
+  const { pollId } = req.body;
+  if (!pollId) return res.status(400).json({ error: 'pollId required' });
+  const data = await getPolls();
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll) return res.status(404).json({ error: 'poll not found' });
+  req.pollsData = data;
+  req.poll = poll;
+  next();
+}
+
+// ─── Public routes ────────────────────────────────────────────────────────────
+
+app.get('/polls', asyncHandler(async (req, res) => {
+  const data = await getPolls();
+  res.json(data);
+}));
+
+app.get('/results', asyncHandler(async (req, res) => {
+  const [pollsData, votesData] = await Promise.all([getPolls(), getVotes()]);
+  const results = pollsData.polls.map(poll => {
+    const counts = {};
+    poll.options.forEach(opt => {
+      const name = getOptionName(opt);
+      if (name) counts[name] = 0;
+    });
+    votesData.votes.filter(v => v.pollId === poll.id).forEach(v => {
+      if (counts.hasOwnProperty(v.option)) counts[v.option]++;
+    });
+    return { pollId: poll.id, title: poll.title, counts };
+  });
+  res.json({ results });
+}));
+
+app.post('/vote', asyncHandler(async (req, res) => {
+  const { pollId, option } = req.body;
+  if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
+  const pollsData = await getPolls();
+  const poll = pollsData.polls.find(p => p.id === pollId);
+  if (!poll) return res.status(404).json({ error: 'Poll not found' });
+  if (!hasOption(poll, option)) return res.status(400).json({ error: 'Invalid option' });
+  const votesObj = await getVotes();
+  votesObj.votes.push({ pollId, option, ts: Date.now() });
+  await saveVotes(votesObj);
+  res.json({ success: true });
+}));
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
 
 app.post('/admin/login', (req, res) => {
   const { user, pass } = req.body || {};
@@ -158,104 +170,71 @@ app.post('/admin/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// ── Nouvelle route : créer un sondage complet ──
-app.post('/admin/addPoll', async (req, res) => {
-  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
+app.post('/admin/addPoll', requireAdmin, asyncHandler(async (req, res) => {
   const { id, title, options } = req.body;
   if (!id || !title) return res.status(400).json({ error: 'id and title required' });
-  try {
-    const data = await getPolls();
-    if (data.polls.find(p => p.id === id)) {
-      return res.status(400).json({ error: 'poll with this id already exists' });
-    }
-    const newPoll = { id, title, options: options || [] };
-    data.polls.push(newPoll);
-    await savePolls(data);
-    res.json({ success: true, poll: newPoll });
-  } catch (e) {
-    res.status(500).json({ error: 'failed to create poll' });
+  const data = await getPolls();
+  if (data.polls.find(p => p.id === id)) {
+    return res.status(400).json({ error: 'poll with this id already exists' });
   }
-});
+  const newPoll = { id, title, options: options || [] };
+  data.polls.push(newPoll);
+  await savePolls(data);
+  res.json({ success: true, poll: newPoll });
+}));
 
-// ── Nouvelle route : supprimer un sondage ──
-app.post('/admin/deletePoll', async (req, res) => {
-  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
+app.post('/admin/deletePoll', requireAdmin, asyncHandler(async (req, res) => {
   const { pollId } = req.body;
   if (!pollId) return res.status(400).json({ error: 'pollId required' });
-  try {
-    const data = await getPolls();
-    data.polls = data.polls.filter(p => p.id !== pollId);
-    await savePolls(data);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: 'failed to delete poll' });
-  }
-});
+  const data = await getPolls();
+  data.polls = data.polls.filter(p => p.id !== pollId);
+  await savePolls(data);
+  res.json({ success: true });
+}));
 
-app.post('/admin/addOption', async (req, res) => {
-  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
-  const { pollId, option } = req.body;
-  if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
-  try {
-    const data = await getPolls();
-    const poll = data.polls.find(p => p.id === pollId);
-    if (!poll) return res.status(404).json({ error: 'poll not found' });
-    if (!hasOption(poll, option)) {
-      poll.options.push(option);
-      await savePolls(data);
+app.post('/admin/addOption', requireAdmin, asyncHandler(async (req, res) => {
+  await withPoll(req, res, async () => {
+    const { option } = req.body;
+    if (!option) return res.status(400).json({ error: 'pollId and option required' });
+    if (!hasOption(req.poll, option)) {
+      req.poll.options.push(option);
+      await savePolls(req.pollsData);
     }
-    res.json({ success: true, poll });
-  } catch (e) {
-    res.status(500).json({ error: 'failed to add option' });
-  }
-});
+    res.json({ success: true, poll: req.poll });
+  });
+}));
 
-app.post('/admin/addOptionWithImage', upload.single('image'), async (req, res) => {
-  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
-  const { pollId, name } = req.body;
-  if (!pollId || !name) return res.status(400).json({ error: 'pollId and name required' });
-  try {
-    const data = await getPolls();
-    const poll = data.polls.find(p => p.id === pollId);
-    if (!poll) return res.status(404).json({ error: 'poll not found' });
+app.post('/admin/addOptionWithImage', requireAdmin, upload.single('image'), asyncHandler(async (req, res) => {
+  await withPoll(req, res, async () => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'pollId and name required' });
     let imagePath = null;
     if (req.file) imagePath = '/uploads/' + req.file.filename;
     const optionObj = { name, image: imagePath };
-    if (!hasOption(poll, name)) {
-      poll.options.push(optionObj);
-      await savePolls(data);
+    if (!hasOption(req.poll, name)) {
+      req.poll.options.push(optionObj);
+      await savePolls(req.pollsData);
     }
-    res.json({ success: true, poll });
-  } catch (e) {
-    res.status(500).json({ error: 'failed to add option with image' });
-  }
-});
+    res.json({ success: true, poll: req.poll });
+  });
+}));
 
-app.post('/admin/removeOption', async (req, res) => {
-  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
-  const { pollId, option } = req.body;
-  if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
-  try {
-    const data = await getPolls();
-    const poll = data.polls.find(p => p.id === pollId);
-    if (!poll) return res.status(404).json({ error: 'poll not found' });
-    poll.options = poll.options.filter(o => getOptionName(o) !== option);
-    await savePolls(data);
-    res.json({ success: true, poll });
-  } catch (e) {
-    res.status(500).json({ error: 'failed to remove option' });
-  }
-});
+app.post('/admin/removeOption', requireAdmin, asyncHandler(async (req, res) => {
+  await withPoll(req, res, async () => {
+    const { option } = req.body;
+    if (!option) return res.status(400).json({ error: 'pollId and option required' });
+    req.poll.options = req.poll.options.filter(o => getOptionName(o) !== option);
+    await savePolls(req.pollsData);
+    res.json({ success: true, poll: req.poll });
+  });
+}));
 
-app.post('/admin/resetVotes', async (req, res) => {
-  if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
-  try {
-    await saveVotes({ votes: [] });
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: 'failed to reset votes' });
-  }
-});
+app.post('/admin/resetVotes', requireAdmin, asyncHandler(async (req, res) => {
+  await saveVotes({ votes: [] });
+  res.json({ success: true });
+}));
+
+// ─── Error handler ────────────────────────────────────────────────────────────
 
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err && err.stack ? err.stack : err);

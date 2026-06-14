@@ -1,26 +1,11 @@
-async function $(sel){return document.querySelector(sel)}
-
-function optionName(opt) {
-  return typeof opt === 'string' ? opt : opt && opt.name;
-}
-
-function optionInitials(name) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase();
-}
+/* global $, optionName, optionInitials, readJsonResponse, fetchPolls */
 
 async function loadPoll(){
-  const area = await $('#pollArea');
+  const area = $('#pollArea');
   const loading = document.getElementById('loading');
   try{
-    const resp = await fetch('/polls');
-    const data = await resp.json();
-    const poll = data.polls && data.polls[0];
+    const polls = await fetchPolls();
+    const poll = polls[0];
     if(!poll) { area.innerHTML = '<p class="empty-state">Aucun sondage disponible.</p>'; return; }
 
     if (loading) loading.hidden = true;
@@ -89,15 +74,15 @@ async function loadPoll(){
       const option = formData.get('choice');
       btn.disabled = true;
       btn.textContent = 'Transmission...';
-      const voteResp = await fetch('/vote', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pollId:poll.id, option})});
-      if (!voteResp.ok) {
-        const error = await voteResp.json().catch(() => ({ error: 'Erreur inconnue' }));
-        alert(error.error || "Impossible d'enregistrer le vote");
+      try {
+        const resp = await fetch('/vote', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pollId:poll.id, option})});
+        await readJsonResponse(resp);
+        showResults();
+      } catch (err) {
+        alert(err.message || "Impossible d'enregistrer le vote");
         btn.disabled = false;
         btn.textContent = 'Verrouiller le vote';
-        return;
       }
-      showResults();
     });
 
     card.appendChild(form);
@@ -112,8 +97,8 @@ async function loadPoll(){
 }
 
 async function showResults(){
-  const resArea = await $('#resultsArea');
-  const resultsDiv = await $('#results');
+  const resArea = $('#resultsArea');
+  const resultsDiv = $('#results');
   try{
     const resp = await fetch('/results');
     const data = await resp.json();
