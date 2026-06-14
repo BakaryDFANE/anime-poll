@@ -215,22 +215,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'internal server error' });
 });
 
-// Export a serverless handler only when explicitly requested via env var.
-// This avoids exporting a handler on full Node hosts (like Render) where we
-// need a running HTTP server. Set `USE_SERVERLESS=true` for Vercel or other
-// serverless platforms.
-if (process.env.USE_SERVERLESS === 'true') {
-  try {
-    const serverless = require('serverless-http');
-    module.exports = serverless(app);
-  } catch (e) {
-    console.warn('serverless-http not installed; falling back to http server');
-    const PORT = process.env.PORT || 3000;
-    const HOST = process.env.HOST || '0.0.0.0';
-    app.listen(PORT, HOST, () => console.log(`Server started on http://${HOST}:${PORT}`));
-  }
-} else {
+// For Vercel: export the app directly.
+// Vercel's @vercel/node runtime detects Express apps and wraps them automatically.
+// For local/Render: listen on port if not in Vercel environment.
+if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   const HOST = process.env.HOST || '0.0.0.0';
   app.listen(PORT, HOST, () => console.log(`Server started on http://${HOST}:${PORT}`));
 }
+
+// Export for Vercel
+module.exports = app;

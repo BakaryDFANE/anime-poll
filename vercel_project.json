@@ -1,0 +1,258 @@
+﻿{
+    "accountId":  "team_Ol3dgun0YcUtjACO6bYCXXJj",
+    "alias":  [
+                  {
+                      "configuredBy":  "A",
+                      "configuredChangedAt":  1781454806304,
+                      "createdAt":  1781454806304,
+                      "deployment":  {
+                                         "alias":  [
+                                                       "anime-poll-deploy.vercel.app",
+                                                       "anime-poll-deploy-bdf-ane-s-projects.vercel.app",
+                                                       "anime-poll-deploy-git-main-bdf-ane-s-projects.vercel.app"
+                                                   ],
+                                         "aliasAssigned":  1781454822610,
+                                         "builds":  [
+                                                        {
+                                                            "src":  "server.js",
+                                                            "use":  "@vercel/node"
+                                                        }
+                                                    ],
+                                         "createdAt":  1781454812694,
+                                         "createdIn":  "sfo1",
+                                         "creator":  {
+                                                         "uid":  "8h3oW6LfdIxKKDYcq2VHpoEY",
+                                                         "email":  "fanebakary2008@gmail.com",
+                                                         "username":  "fanebakary2008-7889",
+                                                         "githubLogin":  "BakaryDFANE"
+                                                     },
+                                         "deploymentHostname":  "anime-poll-deploy-h8lfyq381-bdf-ane-s-projects",
+                                         "forced":  false,
+                                         "id":  "dpl_FLivriqhiVeJfYTY8xoofjU48Zm5",
+                                         "meta":  {
+                                                      "githubCommitAuthorName":  "BakaryDFANE",
+                                                      "githubCommitAuthorEmail":  "244174488+BakaryDFANE@users.noreply.github.com",
+                                                      "githubCommitMessage":  "Initial commit\n\nCreated from https://vercel.com/new",
+                                                      "githubCommitOrg":  "BakaryDFANE",
+                                                      "githubCommitRef":  "main",
+                                                      "githubCommitRepo":  "anime-poll-deploy",
+                                                      "githubCommitSha":  "ab21e4260a42348ada243bfb0f6599f1aab19944",
+                                                      "githubDeployment":  "1",
+                                                      "githubOrg":  "BakaryDFANE",
+                                                      "githubRepo":  "anime-poll-deploy",
+                                                      "githubRepoOwnerType":  "User",
+                                                      "githubCommitRepoId":  "1269378536",
+                                                      "githubRepoId":  "1269378536",
+                                                      "githubRepoVisibility":  "private",
+                                                      "githubHost":  "github.com",
+                                                      "githubCommitAuthorLogin":  "BakaryDFANE",
+                                                      "githubCommitVerification":  "verified",
+                                                      "branchAlias":  "anime-poll-deploy-git-main-bdf-ane-s-projects.vercel.app",
+                                                      "lambdaRuntimeStats":  "{\"nodejs\":1}"
+                                                  },
+                                         "name":  "anime-poll-deploy",
+                                         "plan":  "hobby",
+                                         "private":  true,
+                                         "readyState":  "READY",
+                                         "target":  "production",
+                                         "teamId":  "team_Ol3dgun0YcUtjACO6bYCXXJj",
+                                         "type":  "LAMBDAS",
+                                         "url":  "anime-poll-deploy-h8lfyq381-bdf-ane-s-projects.vercel.app",
+                                         "userId":  "8h3oW6LfdIxKKDYcq2VHpoEY",
+                                         "withCache":  false
+                                     },
+                      "domain":  "anime-poll-deploy.vercel.app",
+                      "environment":  "production",
+                      "gitBranch":  null,
+                      "redirect":  null,
+                      "target":  "PRODUCTION"
+                  }
+              ],
+    "autoExposeSystemEnvs":  true,
+    "autoAssignCustomDomains":  true,
+    "autoAssignCustomDomainsUpdatedBy":  "system",
+    "buildCommand":  null,
+    "createdAt":  1781454806473,
+    "deploymentExpiration":  {
+                                 "expirationDays":  30,
+                                 "expirationDaysProduction":  30,
+                                 "expirationDaysCanceled":  30,
+                                 "expirationDaysErrored":  30,
+                                 "deploymentsToKeep":  10
+                             },
+    "devCommand":  null,
+    "directoryListing":  false,
+    "env":  [
+
+            ],
+    "framework":  "express",
+    "gitForkProtection":  true,
+    "id":  "prj_iEXUwogaTp0XSnG9ChLRR8nRXAK1",
+    "installCommand":  null,
+    "name":  "anime-poll-deploy",
+    "nodeVersion":  "24.x",
+    "outputDirectory":  null,
+    "publicSource":  null,
+    "resourceConfig":  {
+                           "fluid":  true,
+                           "functionDefaultRegions":  [
+                                                          "iad1"
+                                                      ]
+                       },
+    "rootDirectory":  null,
+    "serverlessFunctionRegion":  "iad1",
+    "sourceFilesOutsideRootDirectory":  true,
+    "speedInsights":  {
+                          "id":  "gPgsldHUWB2ZWe5omkVp6hLAQjf",
+                          "hasData":  false
+                      },
+    "ssoProtection":  {
+                          "deploymentType":  "all_except_custom_domains"
+                      },
+    "updatedAt":  1781456705028,
+    "live":  false,
+    "gitComments":  {
+                        "onCommit":  false,
+                        "onPullRequest":  true
+                    },
+    "gitProviderOptions":  {
+                               "createDeployments":  "enabled"
+                           },
+    "webAnalytics":  {
+                         "id":  "oxK4KfYrrwJP3xmfo6hULlkK9"
+                     },
+    "oidcTokenConfig":  {
+                            "enabled":  true,
+                            "issuerMode":  "team"
+                        },
+    "link":  {
+                 "type":  "github",
+                 "repo":  "anime-poll-deploy",
+                 "repoId":  1269378536,
+                 "org":  "BakaryDFANE",
+                 "repoOwnerId":  244174488,
+                 "gitCredentialId":  "cred_21856c9d65276b5df3aed1b74867f5bf7ec8d442",
+                 "productionBranch":  "main",
+                 "createdAt":  1781454806260,
+                 "updatedAt":  1781454806260,
+                 "deployHooks":  [
+
+                                 ]
+             },
+    "latestDeployments":  [
+                              {
+                                  "alias":  [
+                                                "anime-poll-deploy.vercel.app",
+                                                "anime-poll-deploy-bdf-ane-s-projects.vercel.app",
+                                                "anime-poll-deploy-git-main-bdf-ane-s-projects.vercel.app"
+                                            ],
+                                  "aliasAssigned":  1781454822610,
+                                  "builds":  [
+                                                 {
+                                                     "src":  "server.js",
+                                                     "use":  "@vercel/node"
+                                                 }
+                                             ],
+                                  "createdAt":  1781454812694,
+                                  "createdIn":  "sfo1",
+                                  "creator":  {
+                                                  "uid":  "8h3oW6LfdIxKKDYcq2VHpoEY",
+                                                  "email":  "fanebakary2008@gmail.com",
+                                                  "username":  "fanebakary2008-7889",
+                                                  "githubLogin":  "BakaryDFANE"
+                                              },
+                                  "deploymentHostname":  "anime-poll-deploy-h8lfyq381-bdf-ane-s-projects",
+                                  "forced":  false,
+                                  "id":  "dpl_FLivriqhiVeJfYTY8xoofjU48Zm5",
+                                  "meta":  {
+                                               "githubCommitAuthorName":  "BakaryDFANE",
+                                               "githubCommitAuthorEmail":  "244174488+BakaryDFANE@users.noreply.github.com",
+                                               "githubCommitMessage":  "Initial commit\n\nCreated from https://vercel.com/new",
+                                               "githubCommitOrg":  "BakaryDFANE",
+                                               "githubCommitRef":  "main",
+                                               "githubCommitRepo":  "anime-poll-deploy",
+                                               "githubCommitSha":  "ab21e4260a42348ada243bfb0f6599f1aab19944",
+                                               "githubDeployment":  "1",
+                                               "githubOrg":  "BakaryDFANE",
+                                               "githubRepo":  "anime-poll-deploy",
+                                               "githubRepoOwnerType":  "User",
+                                               "githubCommitRepoId":  "1269378536",
+                                               "githubRepoId":  "1269378536",
+                                               "githubRepoVisibility":  "private",
+                                               "githubHost":  "github.com",
+                                               "githubCommitAuthorLogin":  "BakaryDFANE",
+                                               "githubCommitVerification":  "verified",
+                                               "branchAlias":  "anime-poll-deploy-git-main-bdf-ane-s-projects.vercel.app",
+                                               "lambdaRuntimeStats":  "{\"nodejs\":1}"
+                                           },
+                                  "name":  "anime-poll-deploy",
+                                  "plan":  "hobby",
+                                  "private":  true,
+                                  "readyState":  "READY",
+                                  "target":  "production",
+                                  "teamId":  "team_Ol3dgun0YcUtjACO6bYCXXJj",
+                                  "type":  "LAMBDAS",
+                                  "url":  "anime-poll-deploy-h8lfyq381-bdf-ane-s-projects.vercel.app",
+                                  "userId":  "8h3oW6LfdIxKKDYcq2VHpoEY",
+                                  "withCache":  false
+                              }
+                          ],
+    "targets":  {
+                    "production":  {
+                                       "alias":  [
+                                                     "anime-poll-deploy.vercel.app",
+                                                     "anime-poll-deploy-bdf-ane-s-projects.vercel.app",
+                                                     "anime-poll-deploy-git-main-bdf-ane-s-projects.vercel.app"
+                                                 ],
+                                       "aliasAssigned":  1781454822610,
+                                       "builds":  [
+                                                      {
+                                                          "src":  "server.js",
+                                                          "use":  "@vercel/node"
+                                                      }
+                                                  ],
+                                       "createdAt":  1781454812694,
+                                       "createdIn":  "sfo1",
+                                       "creator":  {
+                                                       "uid":  "8h3oW6LfdIxKKDYcq2VHpoEY",
+                                                       "email":  "fanebakary2008@gmail.com",
+                                                       "username":  "fanebakary2008-7889",
+                                                       "githubLogin":  "BakaryDFANE"
+                                                   },
+                                       "deploymentHostname":  "anime-poll-deploy-h8lfyq381-bdf-ane-s-projects",
+                                       "forced":  false,
+                                       "id":  "dpl_FLivriqhiVeJfYTY8xoofjU48Zm5",
+                                       "meta":  {
+                                                    "githubCommitAuthorName":  "BakaryDFANE",
+                                                    "githubCommitAuthorEmail":  "244174488+BakaryDFANE@users.noreply.github.com",
+                                                    "githubCommitMessage":  "Initial commit\n\nCreated from https://vercel.com/new",
+                                                    "githubCommitOrg":  "BakaryDFANE",
+                                                    "githubCommitRef":  "main",
+                                                    "githubCommitRepo":  "anime-poll-deploy",
+                                                    "githubCommitSha":  "ab21e4260a42348ada243bfb0f6599f1aab19944",
+                                                    "githubDeployment":  "1",
+                                                    "githubOrg":  "BakaryDFANE",
+                                                    "githubRepo":  "anime-poll-deploy",
+                                                    "githubRepoOwnerType":  "User",
+                                                    "githubCommitRepoId":  "1269378536",
+                                                    "githubRepoId":  "1269378536",
+                                                    "githubRepoVisibility":  "private",
+                                                    "githubHost":  "github.com",
+                                                    "githubCommitAuthorLogin":  "BakaryDFANE",
+                                                    "githubCommitVerification":  "verified",
+                                                    "branchAlias":  "anime-poll-deploy-git-main-bdf-ane-s-projects.vercel.app",
+                                                    "lambdaRuntimeStats":  "{\"nodejs\":1}"
+                                                },
+                                       "name":  "anime-poll-deploy",
+                                       "plan":  "hobby",
+                                       "private":  true,
+                                       "readyState":  "READY",
+                                       "target":  "production",
+                                       "teamId":  "team_Ol3dgun0YcUtjACO6bYCXXJj",
+                                       "type":  "LAMBDAS",
+                                       "url":  "anime-poll-deploy-h8lfyq381-bdf-ane-s-projects.vercel.app",
+                                       "userId":  "8h3oW6LfdIxKKDYcq2VHpoEY",
+                                       "withCache":  false
+                                   }
+                }
+}
