@@ -15,9 +15,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Session middleware for admin auth
 const session = require('express-session');
 const multer = require('multer');
+const os = require('os');
 
-// ensure uploads folder exists
-const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+// ensure uploads folder exists; on production serverless use system tmp
+const UPLOADS_DIR = process.env.UPLOADS_DIR || (process.env.NODE_ENV === 'production'
+  ? path.join(os.tmpdir(), 'uploads')
+  : path.join(__dirname, 'public', 'uploads'));
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // multer setup
@@ -205,6 +208,20 @@ app.post('/admin/resetVotes', (req, res) => {
   res.json({ success: true });
 });
 
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
-app.listen(PORT, HOST, () => console.log(`Server started on http://${HOST}:${PORT}`));
+// Error handler to avoid unhandled exceptions crashing the runtime
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err && err.stack ? err.stack : err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'internal server error' });
+});
+
+// Export a serverless handler for platforms like Vercel
+try {
+  const serverless = require('serverless-http');
+  module.exports = serverless(app);
+} catch (e) {
+  // Fallback for local development when serverless-http is not installed
+  const PORT = process.env.PORT || 3000;
+  const HOST = process.env.HOST || '0.0.0.0';
+  app.listen(PORT, HOST, () => console.log(`Server started on http://${HOST}:${PORT}`));
+}
