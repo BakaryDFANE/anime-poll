@@ -188,16 +188,16 @@ app.post('/vote', asyncHandler(async (req, res) => {
 // ─── Comments ─────────────────────────────────────────────────────────────────
 
 app.get('/comments', asyncHandler(async (req, res) => {
-  const pollId = req.query.pollId;
+  const { pollId, option } = req.query;
   const data = await getComments();
-  const list = pollId
-    ? data.comments.filter(c => c.pollId === pollId)
-    : data.comments;
+  let list = data.comments;
+  if (pollId) list = list.filter(c => c.pollId === pollId);
+  if (option) list = list.filter(c => c.option === option);
   res.json({ comments: list });
 }));
 
 app.post('/comments', asyncHandler(async (req, res) => {
-  const { pollId, author, text } = req.body;
+  const { pollId, option, author, text } = req.body;
   if (!pollId || !text) return res.status(400).json({ error: 'pollId and text required' });
   if (text.length > 500) return res.status(400).json({ error: 'comment too long (max 500 chars)' });
   const pollsData = await getPolls();
@@ -207,6 +207,7 @@ app.post('/comments', asyncHandler(async (req, res) => {
   const comment = {
     id: Date.now() + '-' + Math.round(Math.random() * 1E9),
     pollId,
+    option: option || null,
     author: (author || 'Anonyme').slice(0, 50),
     text: text.slice(0, 500),
     ts: Date.now()
