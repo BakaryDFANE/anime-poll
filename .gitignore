@@ -1,2 +1,22 @@
 node_modules/
 .env
+.env.*
+
+# Sensitive deployment/API response files
+admin_pass_resp.json
+admin_user_resp.json
+session_resp.json
+render_owners.json
+render_services.json
+render_services_list.json
+render-openapi.json
+vercel_project.json
+proj_after.json
+
+# Development inspection scripts
+render_api_inspect.py
+render_inspect.py
+render_inspect_ref.py
+
+# Logs
+*.log
