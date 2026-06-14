@@ -1,0 +1,23 @@
+:root{--primary:#4e7cff;--bg:#f4f4f9}
+*{box-sizing:border-box}
+body{font-family:Inter,Arial,sans-serif;background:var(--bg);margin:0;padding:24px}
+.container{max-width:720px;margin:18px auto;background:#fff;padding:22px;border-radius:12px;box-shadow:0 6px 24px rgba(12,15,30,0.06)}
+#siteTitle{font-size:clamp(1.6rem,4vw,2.6rem);margin:0 0 6px;color:var(--primary);letter-spacing:0.02em}
+.subtitle{color:#46506a;margin:0 0 16px}
+.poll-card{padding:16px;border-radius:10px;background:linear-gradient(180deg,#fbfdff,#f4f8ff);border:1px solid #e6eefc}
+.option{display:flex;align-items:center;gap:12px;padding:8px 6px;border-radius:8px;margin:6px 0;cursor:pointer;transition:transform .12s ease,box-shadow .12s}
+.option:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(78,124,255,0.12)}
+button.primary{background:var(--primary);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer}
+button.ghost{background:transparent;border:1px solid #cfd8ef;color:#223}
+.results-bar{height:12px;background:#e9eefc;border-radius:8px;overflow:hidden;margin-top:6px}
+.results-fill{height:100%;background:var(--primary);width:0;transition:width .6s ease}
+#loading{color:#556}
+
+/* animated title letters */
+#siteTitle{display:inline-block}
+#siteTitle span{display:inline-block;animation:wave 1.2s ease-in-out infinite}
+#siteTitle span:nth-child(1){animation-delay:0s}
+#siteTitle span:nth-child(2){animation-delay:0.06s}
+#siteTitle span:nth-child(3){animation-delay:0.12s}
+#siteTitle span:nth-child(4){animation-delay:0.18s}
+@keyframes wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}

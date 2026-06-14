@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sondage anime (anonyme)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <header id="titleWrap">
+      <h1 id="siteTitle">Sondage Animes</h1>
+      <p class="subtitle">Votez anonymement pour votre anime préféré.</p>
+    </header>
+
+    <section id="pollArea">
+      <div id="loading">Chargement du sondage…</div>
+    </section>
+
+    <section id="resultsArea" hidden>
+      <h2>Résultats</h2>
+      <div id="results"></div>
+      <button id="newVote">Voter à nouveau</button>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

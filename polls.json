@@ -1,0 +1,15 @@
+{
+  "polls": [
+    {
+      "id": "general-anime",
+      "title": "Quel est ton anime préféré ?",
+      "options": [
+        "One Piece",
+        "Naruto",
+        "Jujutsu Kaisen (JJK)",
+        "Bleach",
+        "Shingeki no Kyojin (SNK)"
+      ]
+    }
+  ]
+}
