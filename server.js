@@ -313,6 +313,15 @@ app.post('/admin/resetVotes', requireAdmin, asyncHandler(async (req, res) => {
   res.json({ success: true });
 }));
 
+app.post('/admin/reseedPolls', requireAdmin, asyncHandler(async (req, res) => {
+  const seedPath = path.join(__dirname, 'polls.json');
+  if (!fs.existsSync(seedPath)) return res.status(404).json({ error: 'polls.json not found' });
+  const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+  await savePolls(seed);
+  await saveVotes({ votes: [] });
+  res.json({ success: true, count: seed.polls[0] ? seed.polls[0].options.length : 0 });
+}));
+
 app.post('/admin/deleteComment', requireAdmin, asyncHandler(async (req, res) => {
   const { commentId } = req.body;
   if (!commentId) return res.status(400).json({ error: 'commentId required' });

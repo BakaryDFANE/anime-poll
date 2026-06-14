@@ -15,6 +15,7 @@ window.addEventListener('load', async function () {
   var newOpt = $('#newOption');
   var resetBtn = $('#resetVotes');
   var resetCommentsBtn = $('#resetComments');
+  var reseedBtn = $('#reseedPolls');
   var logoutBtn = $('#logoutBtn');
 
   loginBtn.addEventListener('click', async function () {
@@ -67,6 +68,18 @@ window.addEventListener('load', async function () {
       var resp = await fetch('/admin/resetVotes', { method: 'POST', credentials: 'include' });
       await readJsonResponse(resp);
       alert('Votes réinitialisés');
+    } catch (err) {
+      alert('Erreur: ' + err.message);
+    }
+  });
+
+  reseedBtn.addEventListener('click', async function () {
+    if (!confirm('Recharger les animes par défaut ? Cela remplacera toutes les options et réinitialisera les votes.')) return;
+    try {
+      var resp = await fetch('/admin/reseedPolls', { method: 'POST', credentials: 'include' });
+      var data = await readJsonResponse(resp);
+      alert(data.count + ' animes rechargés');
+      var poll = await fetchPoll(); renderPoll(poll);
     } catch (err) {
       alert('Erreur: ' + err.message);
     }
