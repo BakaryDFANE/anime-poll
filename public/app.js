@@ -562,18 +562,26 @@ async function buildReplyBox(reply) {
 // ── Formulaire Community principal
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Boutons langue
+  // FR par défaut : on saute directement l'écran de choix langue
+  currentLang = 'fr';
+  applyTranslations();
+  loadPoll();
+
+  // Boutons langue (optionnel, si présents)
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       currentLang = btn.dataset.lang;
-      document.getElementById('langScreen').hidden = true;
-      document.getElementById('mainApp').hidden = false;
+      const langScreen = document.getElementById('langScreen');
+      if (langScreen) langScreen.hidden = true;
+      const mainApp = document.getElementById('mainApp');
+      if (mainApp) mainApp.hidden = false;
       applyTranslations();
       loadPoll();
     });
   });
 
   // Bouton retour Community
+
   const backBtn = document.getElementById('backBtn');
   if (backBtn) {
     backBtn.addEventListener('click', () => {
