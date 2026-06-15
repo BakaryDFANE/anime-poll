@@ -556,7 +556,9 @@ button.ghost{
 ══════════════════════════════════════════════ */
 .option-block {
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  padding: 14px 14px;
   border: 1px solid var(--line);
+  gap: 10px;
   border-radius: 0;
   clip-path: polygon(0 0, 94% 0, 100% 14%, 100% 100%, 6% 100%, 0 86%);
   padding: 18px;
@@ -614,7 +616,7 @@ button.ghost{
 }
 
 .vote-label {
-  font-size: 10px;
+  display: none;
   font-family: Rajdhani, Arial, sans-serif;
   font-weight: 600;
   text-transform: uppercase;
