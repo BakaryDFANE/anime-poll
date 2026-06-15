@@ -148,4 +148,4 @@ window.addEventListener('load', async ()=>{
       if (!name) return;
 
       const li = document.createElement('li');
-      li.className
+li.className = 'admin-option'; 
