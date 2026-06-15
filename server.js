@@ -120,7 +120,7 @@ app.get('/results', async (req, res) => {
 });
 
 app.post('/vote', async (req, res) => {
-  const { pollId, option, voteType } = req.body; // voteType vaut 'like', 'dislike' ou 'love'
+  const { pollId, option, voteType, cancel } = req.body;
   if (!pollId || !option || !voteType) {
     return res.status(400).json({ error: 'pollId, option and voteType required' });
   }
@@ -133,12 +133,16 @@ app.post('/vote', async (req, res) => {
     const poll = pollsData.polls.find(p => p.id === pollId);
     if (!poll) return res.status(404).json({ error: 'Poll not found' });
 
-    // Trouver l'option et incrémenter le bon émoji
     let found = false;
     poll.options = poll.options.map(opt => {
       const norm = normalizeOptionStructure(opt);
       if (norm.name === option) {
-        norm.votes[voteType] = (norm.votes[voteType] || 0) + 1;
+        if (cancel) {
+          // Annuler le vote (décrémenter sans passer sous 0)
+          norm.votes[voteType] = Math.max(0, (norm.votes[voteType] || 0) - 1);
+        } else {
+          norm.votes[voteType] = (norm.votes[voteType] || 0) + 1;
+        }
         found = true;
       }
       return norm;
@@ -155,38 +159,37 @@ app.post('/vote', async (req, res) => {
 });
 
 // ── Nouvelle route publique : Poster un commentaire ──
-app.post('/comment', async (req, res) => {
-  const { pollId, option, author, text } = req.body;
+app.post("/comment", async (req, res) => {
+  const { pollId, option, author, text, parentId } = req.body;
   if (!pollId || !option || !text) {
-    return res.status(400).json({ error: 'pollId, option and text are required' });
+    return res.status(400).json({ error: "pollId, option and text are required" });
   }
-
   try {
     const pollsData = await getPolls();
     const poll = pollsData.polls.find(p => p.id === pollId);
-    if (!poll) return res.status(404).json({ error: 'Poll not found' });
-
+    if (!poll) return res.status(404).json({ error: "Poll not found" });
     let found = false;
     poll.options = poll.options.map(opt => {
       const norm = normalizeOptionStructure(opt);
       if (norm.name === option) {
+        const commentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
         norm.comments.push({
-          author: author || 'Anonyme',
+          id: commentId,
+          author: author || "Anonyme",
           text: text,
+          parentId: parentId || null,
           createdAt: new Date().toISOString()
         });
         found = true;
       }
       return norm;
     });
-
-    if (!found) return res.status(400).json({ error: 'Invalid option' });
-
+    if (!found) return res.status(400).json({ error: "Invalid option" });
     await savePolls(pollsData);
     res.json({ success: true });
   } catch (e) {
-    console.error('Comment error:', e);
-    res.status(500).json({ error: 'failed to save comment' });
+    console.error("Comment error:", e);
+    res.status(500).json({ error: "failed to save comment" });
   }
 });
 

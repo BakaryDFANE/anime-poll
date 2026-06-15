@@ -1,66 +1,227 @@
-async function $(sel){return document.querySelector(sel)}
+// ══════════════════════════════════════════════
+//  TRADUCTIONS
+// ══════════════════════════════════════════════
+const TRANSLATIONS = {
+  fr: {
+    siteTitle: "Sondage Animes",
+    subtitle: "Vote anonymement pour ton animé préféré et regarde le classement s'allumer en direct.",
+    loading: "Chargement du sondage...",
+    pollLabel: "Sondage interactif",
+    dislike: "J'aime pas",
+    like: "J'aime",
+    love: "J'adore",
+    community: "Community",
+    comments: "Commentaires",
+    noComments: "Aucun commentaire.",
+    addComment: "Ajouter un message...",
+    anonymous: "Anonyme",
+    pseudo: "Pseudo",
+    resultsLabel: "Résultats",
+    resultsTitle: "Classement actuel",
+    voteConfirmed: "✅ Votre vote a été pris en compte.",
+    newVote: "Voter à nouveau",
+    back: "← Retour",
+    communitySubtitle: "Discute avec la communauté à propos de cet animé",
+    reply: "Répondre",
+    cancelReply: "Annuler",
+    noVote: "Aucun sondage disponible.",
+    errorLoad: "Erreur lors du chargement.",
+    errorVote: "Erreur lors du vote.",
+    errorComment: "Impossible d'envoyer le message.",
+    replyPlaceholder: "Écrire une réponse...",
+    score: "Score",
+  },
+  en: {
+    siteTitle: "Anime Poll",
+    subtitle: "Vote anonymously for your favourite anime and watch the ranking light up live.",
+    loading: "Loading poll...",
+    pollLabel: "Interactive Poll",
+    dislike: "Dislike",
+    like: "Like",
+    love: "Love",
+    community: "Community",
+    comments: "Comments",
+    noComments: "No comments yet.",
+    addComment: "Add a message...",
+    anonymous: "Anonymous",
+    pseudo: "Username",
+    resultsLabel: "Results",
+    resultsTitle: "Current Ranking",
+    voteConfirmed: "✅ Your vote has been recorded.",
+    newVote: "Vote again",
+    back: "← Back",
+    communitySubtitle: "Chat with the community about this anime",
+    reply: "Reply",
+    cancelReply: "Cancel",
+    noVote: "No poll available.",
+    errorLoad: "Error while loading.",
+    errorVote: "Error recording vote.",
+    errorComment: "Could not send message.",
+    replyPlaceholder: "Write a reply...",
+    score: "Score",
+  },
+  ar: {
+    siteTitle: "استطلاع الأنمي",
+    subtitle: "صوّت بشكل مجهول لأنيميك المفضل وشاهد الترتيب يضيء مباشرةً.",
+    loading: "جارٍ تحميل الاستطلاع...",
+    pollLabel: "استطلاع تفاعلي",
+    dislike: "لا يعجبني",
+    like: "يعجبني",
+    love: "أحبه",
+    community: "المجتمع",
+    comments: "التعليقات",
+    noComments: "لا توجد تعليقات بعد.",
+    addComment: "أضف رسالة...",
+    anonymous: "مجهول",
+    pseudo: "اسم مستعار",
+    resultsLabel: "النتائج",
+    resultsTitle: "الترتيب الحالي",
+    voteConfirmed: "✅ تم تسجيل تصويتك.",
+    newVote: "التصويت مجدداً",
+    back: "← رجوع",
+    communitySubtitle: "تحدث مع المجتمع حول هذا الأنمي",
+    reply: "رد",
+    cancelReply: "إلغاء",
+    noVote: "لا يوجد استطلاع.",
+    errorLoad: "خطأ أثناء التحميل.",
+    errorVote: "خطأ أثناء التصويت.",
+    errorComment: "تعذّر إرسال الرسالة.",
+    replyPlaceholder: "اكتب رداً...",
+    score: "النقاط",
+  }
+};
 
+let currentLang = 'fr';
+let currentPoll = null;
+let currentCommunityAnime = null;
+
+// Votes locaux pour toggle (clé = `${pollId}:${optionName}`)
+const localVotes = {};
+
+function t(key) {
+  return (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) || TRANSLATIONS['fr'][key] || key;
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    el.placeholder = t(key);
+  });
+  if (currentLang === 'ar') {
+    document.documentElement.setAttribute('dir', 'rtl');
+  } else {
+    document.documentElement.setAttribute('dir', 'ltr');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  SÉLECTION LANGUE
+// ══════════════════════════════════════════════
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentLang = btn.dataset.lang;
+    document.getElementById('langScreen').hidden = true;
+    document.getElementById('mainApp').hidden = false;
+    applyTranslations();
+    loadPoll();
+  });
+});
+
+// ══════════════════════════════════════════════
+//  UTILITAIRES
+// ══════════════════════════════════════════════
 function optionName(opt) {
   return typeof opt === 'string' ? opt : opt && opt.name;
 }
-
 function optionInitials(name) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase();
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 }
-
-// Calcule le score global basé sur les 3 types de votes
 function calculateScore(counts) {
-  const love = counts.love || 0;
-  const like = counts.like || 0;
-  const dislike = counts.dislike || 0;
-  return (love * 2) + like - dislike;
+  return (counts.love || 0) * 2 + (counts.like || 0) - (counts.dislike || 0);
 }
 
-async function loadPoll(){
-  const area = await $('#pollArea');
+// ══════════════════════════════════════════════
+//  TRADUCTION VIA CLAUDE API
+// ══════════════════════════════════════════════
+async function translateText(text, targetLang) {
+  if (targetLang === 'fr') return text; // pas besoin de traduire si français
+  const langNames = { en: 'English', ar: 'Arabic' };
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: `Translate the following text to ${langNames[targetLang]}. Return ONLY the translated text, nothing else:\n\n${text}`
+        }]
+      })
+    });
+    if (!resp.ok) return text;
+    const data = await resp.json();
+    return data.content && data.content[0] && data.content[0].text ? data.content[0].text.trim() : text;
+  } catch {
+    return text;
+  }
+}
+
+async function translateComment(text) {
+  return await translateText(text, currentLang);
+}
+
+// ══════════════════════════════════════════════
+//  CHARGEMENT DU SONDAGE
+// ══════════════════════════════════════════════
+async function loadPoll() {
+  const area = document.getElementById('pollArea');
   const loading = document.getElementById('loading');
-  try{
+  if (loading) { loading.hidden = false; loading.textContent = t('loading'); }
+
+  try {
     const resp = await fetch('/polls');
     const data = await resp.json();
     const poll = data.polls && data.polls[0];
-    if(!poll) { area.innerHTML = '<p class="empty-state">Aucun sondage disponible.</p>'; return; }
+    currentPoll = poll;
 
+    if (!poll) {
+      area.innerHTML = `<p class="empty-state">${t('noVote')}</p>`;
+      return;
+    }
     if (loading) loading.hidden = true;
     area.innerHTML = '';
-    
-    const card = document.createElement('div'); card.className='poll-card';
-    const meta = document.createElement('div'); meta.className='section-label'; meta.textContent='Sondage interactif';
-    const title = document.createElement('h2'); title.textContent = poll.title;
-    card.appendChild(meta); card.appendChild(title);
+
+    const card = document.createElement('div');
+    card.className = 'poll-card';
+
+    const meta = document.createElement('div');
+    meta.className = 'section-label';
+    meta.textContent = t('pollLabel');
+
+    const title = document.createElement('h2');
+    title.textContent = poll.title;
+
+    card.appendChild(meta);
+    card.appendChild(title);
 
     const animeGrid = document.createElement('div');
     animeGrid.className = 'option-grid';
-    
-    poll.options.forEach((opt, idx) => {
+
+    poll.options.forEach((opt) => {
       const name = optionName(opt);
       if (!name) return;
 
       const row = document.createElement('div');
-      row.className = 'option-block'; // Changé en div pour inclure formulaires et boutons
-      row.style.border = "1px solid var(--line, #eee)";
-      row.style.padding = "16px";
-      row.style.borderRadius = "8px";
-      row.style.marginBottom = "16px";
-      row.style.background = "var(--panel, #fff)";
+      row.className = 'option-block';
 
-      // En-tête de l'animé (Image/Initiale + Nom)
+      // ── En-tête animé
       const headerDiv = document.createElement('div');
       headerDiv.className = 'anime-header';
-      headerDiv.style.display = 'flex';
-      headerDiv.style.alignItems = 'center';
-      headerDiv.style.gap = '12px';
-      headerDiv.style.marginBottom = '12px';
 
       const art = document.createElement('span');
       art.className = 'option-art';
@@ -75,219 +236,113 @@ async function loadPoll(){
 
       const txt = document.createElement('span');
       txt.className = 'option-name';
-      txt.style.fontWeight = 'bold';
       txt.textContent = name;
 
       headerDiv.appendChild(art);
       headerDiv.appendChild(txt);
       row.appendChild(headerDiv);
 
-      // --- 1. SECTION VOTE (3 BOUTONS ÉMOJIS) ---
+      // ── Boutons vote (toggle)
+      const voteKey = `${poll.id}:${name}`;
       const voteContainer = document.createElement('div');
       voteContainer.className = 'emoji-vote-container';
-      voteContainer.style.display = 'flex';
-      voteContainer.style.justifyContent = 'space-around';
-      voteContainer.style.padding = '8px';
-      voteContainer.style.background = 'var(--panel-2, #f9f9f9)';
-      voteContainer.style.borderRadius = '6px';
-      voteContainer.style.marginBottom = '16px';
 
       const emojis = [
-        { type: 'dislike', icon: '👎', label: "J'aime pas" },
-        { type: 'like', icon: '👍', label: "J'aime" },
-        { type: 'love', icon: '❤️', label: "J'aime trop" }
+        { type: 'dislike', icon: '👎', labelKey: 'dislike' },
+        { type: 'like', icon: '👍', labelKey: 'like' },
+        { type: 'love', icon: '❤️', labelKey: 'love' }
       ];
 
+      const btns = {};
       emojis.forEach(emoji => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.style.background = 'none';
-        btn.style.border = 'none';
-        btn.style.fontSize = '24px';
-        btn.style.cursor = 'pointer';
-        btn.style.transition = 'transform 0.1s';
-        btn.title = emoji.label;
-        btn.textContent = emoji.icon;
-        
-        btn.onmouseover = () => btn.style.transform = 'scale(1.2)';
-        btn.onmouseout = () => btn.style.transform = 'scale(1)';
+        btn.className = 'vote-btn';
+        btn.title = t(emoji.labelKey);
+        btn.dataset.type = emoji.type;
+        btn.innerHTML = `${emoji.icon}<span class="vote-label">${t(emoji.labelKey)}</span>`;
+
+        // Marquer si déjà voté
+        if (localVotes[voteKey] === emoji.type) {
+          btn.classList.add('voted');
+        }
 
         btn.addEventListener('click', async () => {
-          btn.disabled = true;
-          const voteResp = await fetch('/vote', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pollId: poll.id, option: name, voteType: emoji.type })
-          });
-          if (!voteResp.ok) {
-            alert("Erreur lors de l'enregistrement du vote");
-            btn.disabled = false;
+          const prevVote = localVotes[voteKey];
+
+          if (prevVote === emoji.type) {
+            // Annuler le vote
+            await fetch('/vote', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pollId: poll.id, option: name, voteType: emoji.type, cancel: true })
+            });
+            delete localVotes[voteKey];
+            btn.classList.remove('voted');
           } else {
+            // Annuler l'ancien vote si existant
+            if (prevVote) {
+              await fetch('/vote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pollId: poll.id, option: name, voteType: prevVote, cancel: true })
+              });
+              if (btns[prevVote]) btns[prevVote].classList.remove('voted');
+            }
+            // Nouveau vote
+            const voteResp = await fetch('/vote', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pollId: poll.id, option: name, voteType: emoji.type })
+            });
+            if (!voteResp.ok) { alert(t('errorVote')); return; }
+            localVotes[voteKey] = emoji.type;
+            btn.classList.add('voted');
             showResults();
           }
         });
+
+        btns[emoji.type] = btn;
         voteContainer.appendChild(btn);
       });
       row.appendChild(voteContainer);
 
-      // --- 2. SECTION AFFICHAGE DES COMMENTAIRES ---
-      const commentSection = document.createElement('div');
-      commentSection.className = 'comment-section';
-      commentSection.style.borderTop = '1px solid var(--line, #eee)';
-      commentSection.style.paddingTop = '10px';
+      // ── Bouton Community
+      const commBtn = document.createElement('button');
+      commBtn.className = 'community-btn';
+      commBtn.textContent = `💬 ${name} ${t('community')}`;
+      commBtn.addEventListener('click', () => openCommunity(poll, name));
+      row.appendChild(commBtn);
 
-      const commTitle = document.createElement('h4');
-      commTitle.textContent = 'Commentaires';
-      commTitle.style.fontSize = '12px';
-      commTitle.style.color = 'var(--ink, #666)';
-      commTitle.style.marginBottom = '6px';
-      commentSection.appendChild(commTitle);
-
-      const commList = document.createElement('div');
-      commList.style.maxHeight = '120px';
-      commList.style.overflowY = 'auto';
-      commList.style.fontSize = '13px';
-      commList.style.marginBottom = '10px';
-
-      if (opt.comments && opt.comments.length > 0) {
-        opt.comments.forEach(c => {
-          const cBox = document.createElement('div');
-          cBox.style.padding = '4px 8px';
-          cBox.style.background = 'var(--panel-2, #f5f5f5)';
-          cBox.style.borderRadius = '4px';
-          cBox.style.marginBottom = '4px';
-          cBox.innerHTML = `<strong style="color:var(--primary, #4f46e5)">${c.author}</strong> : ${c.text}`;
-          commList.appendChild(cBox);
-        });
-      } else {
-        commList.innerHTML = '<p style="color:#aaa; font-style:italic;">Aucun commentaire.</p>';
-      }
-      commentSection.appendChild(commList);
-
-      // --- 3. FORMULAIRE DE COMMENTAIRE (ANONYME OU PSEUDO) ---
-      const commForm = document.createElement('form');
-      commForm.style.display = 'flex';
-      commForm.style.flexDirection = 'column';
-      commForm.style.gap = '6px';
-
-      // Options Anonyme / Pseudo
-      const identityDiv = document.createElement('div');
-      identityDiv.style.display = 'flex';
-      identityDiv.style.gap = '10px';
-      identityDiv.style.fontSize = '11px';
-
-      const labelAnon = document.createElement('label');
-      const radioAnon = document.createElement('input');
-      radioAnon.type = 'radio';
-      radioAnon.name = `identity-${idx}`;
-      radioAnon.checked = true;
-      labelAnon.appendChild(radioAnon);
-      labelAnon.append(' Anonyme');
-
-      const labelPseudo = document.createElement('label');
-      const radioPseudo = document.createElement('input');
-      radioPseudo.type = 'radio';
-      radioPseudo.name = `identity-${idx}`;
-      labelPseudo.appendChild(radioPseudo);
-      labelPseudo.append(' Pseudo');
-
-      identityDiv.appendChild(labelAnon);
-      identityDiv.appendChild(labelPseudo);
-      commForm.appendChild(identityDiv);
-
-      // Champ de texte Pseudo (caché de base)
-      const pseudoInput = document.createElement('input');
-      pseudoInput.type = 'text';
-      pseudoInput.placeholder = 'Ton pseudo...';
-      pseudoInput.style.display = 'none';
-      pseudoInput.style.padding = '4px';
-      pseudoInput.style.fontSize = '12px';
-      commForm.appendChild(pseudoInput);
-
-      radioAnon.addEventListener('change', () => { pseudoInput.style.display = 'none'; });
-      radioPseudo.addEventListener('change', () => { pseudoInput.style.display = 'block'; });
-
-      // Champ texte du commentaire + Bouton envoyer
-      const inputGroup = document.createElement('div');
-      inputGroup.style.display = 'flex';
-      inputGroup.style.gap = '6px';
-
-      const textInput = document.createElement('input');
-      textInput.type = 'text';
-      textInput.placeholder = 'Ajouter un commentaire...';
-      textInput.style.flex = '1';
-      textInput.style.padding = '6px';
-      textInput.style.fontSize = '13px';
-      textInput.required = true;
-
-      const sendBtn = document.createElement('button');
-      sendBtn.type = 'submit';
-      sendBtn.textContent = '➚';
-      sendBtn.style.padding = '4px 10px';
-      sendBtn.style.cursor = 'pointer';
-
-      inputGroup.appendChild(textInput);
-      inputGroup.appendChild(sendBtn);
-      commForm.appendChild(inputGroup);
-
-      // Événement d'envoi du commentaire
-      commForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const author = radioAnon.checked ? 'Anonyme' : (pseudoInput.value.trim() || 'Anonyme');
-        const text = textInput.value.trim();
-        
-        sendBtn.disabled = true;
-        const commResp = await fetch('/comment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pollId: poll.id, option: name, author, text })
-        });
-
-        if (commResp.ok) {
-          textInput.value = '';
-          pseudoInput.value = '';
-          loadPoll(); // Recharge le sondage pour voir le commentaire en direct
-        } else {
-          alert("Impossible d'envoyer le commentaire");
-          sendBtn.disabled = false;
-        }
-      });
-
-      commentSection.appendChild(commForm);
-      row.appendChild(commentSection);
       animeGrid.appendChild(row);
     });
 
     card.appendChild(animeGrid);
     area.appendChild(card);
-    
-    // Charger également les résultats en bas de page directement
     showResults();
-  }catch(err){
-    const isLocalFile = window.location.protocol === 'file:';
-    area.innerHTML = isLocalFile
-      ? '<p class="empty-state">Lance le serveur avec npm start, puis ouvre http://localhost:3000.</p>'
-      : '<p class="empty-state">Erreur lors du chargement.</p>';
+
+  } catch (err) {
+    area.innerHTML = `<p class="empty-state">${t('errorLoad')}</p>`;
     console.error(err);
   }
 }
 
-async function showResults(){
-  const resArea = await $('#resultsArea');
-  const resultsDiv = await $('#results');
-  try{
+// ══════════════════════════════════════════════
+//  RÉSULTATS
+// ══════════════════════════════════════════════
+async function showResults() {
+  const resArea = document.getElementById('resultsArea');
+  const resultsDiv = document.getElementById('results');
+  try {
     const resp = await fetch('/results');
     const data = await resp.json();
     const res = data.results && data.results[0];
-    if(!res){ resultsDiv.innerHTML='<p class="empty-state">Aucun résultat.</p>'; return; }
-    resultsDiv.innerHTML='';
-    
-    // Convertir les résultats en tableau pour pouvoir les TRIER par score
-    const sortedEntries = Object.entries(res.counts).sort((a, b) => {
-      return calculateScore(b[1]) - calculateScore(a[1]);
-    });
+    if (!res) { resultsDiv.innerHTML = `<p class="empty-state">${t('noVote')}</p>`; return; }
+    resultsDiv.innerHTML = '';
 
-    sortedEntries.forEach(([opt, counts], idx)=>{
+    const sorted = Object.entries(res.counts).sort((a, b) => calculateScore(b[1]) - calculateScore(a[1]));
+
+    sorted.forEach(([opt, counts], idx) => {
       const love = counts.love || 0;
       const like = counts.like || 0;
       const dislike = counts.dislike || 0;
@@ -299,35 +354,249 @@ async function showResults(){
 
       const label = document.createElement('div');
       label.className = 'result-label';
-      label.style.display = 'flex';
-      label.style.justifyContent = 'flex-between';
-      
+
       const name = document.createElement('span');
       name.innerHTML = `<strong>#${idx + 1}</strong> ${opt}`;
-      
+
       const value = document.createElement('strong');
-      value.innerHTML = `<span title="J'aime trop">❤️${love}</span> <span title="J'aime">👍${like}</span> <span title="J'aime pas">👎${dislike}</span> — Score: ${totalScore} pts`;
-      
+      value.innerHTML = `<span title="${t('love')}">❤️${love}</span> <span title="${t('like')}">👍${like}</span> <span title="${t('dislike')}">👎${dislike}</span> — ${t('score')}: ${totalScore} pts`;
+
       label.appendChild(name);
       label.appendChild(value);
 
-      // Barre de progression visuelle basée sur le score absolu (positif) pour le design
       const bar = document.createElement('div');
-      bar.className='results-bar';
+      bar.className = 'results-bar';
       const fill = document.createElement('div');
-      fill.className='results-fill';
-      // Permet d'éviter les bugs d'affichage si le score est négatif
-      fill.style.width = Math.max(0, Math.min(100, totalScore * 5)) + '%'; 
-      
+      fill.className = 'results-fill';
+      fill.style.width = Math.max(0, Math.min(100, totalScore * 5)) + '%';
       bar.appendChild(fill);
+
       row.appendChild(label);
       row.appendChild(bar);
       resultsDiv.appendChild(row);
     });
-    
+
+    // Texte "Vote pris en compte"
+    const confirmed = resArea.querySelector('.vote-confirmed');
+    if (confirmed) confirmed.textContent = t('voteConfirmed');
+
+    const newVoteBtn = document.getElementById('newVote');
+    newVoteBtn.textContent = t('newVote');
+    newVoteBtn.onclick = () => {
+      loadPoll();
+      document.getElementById('pollArea').scrollIntoView({ behavior: 'smooth' });
+    };
+
     resArea.hidden = false;
-    document.getElementById('newVote').onclick = ()=>{ loadPoll(); document.getElementById('pollArea').scrollIntoView({behavior:'smooth'}); };
-  }catch(err){ console.error(err); }
+  } catch (err) { console.error(err); }
 }
 
-window.addEventListener('load', ()=>{ loadPoll(); });
+// ══════════════════════════════════════════════
+//  PAGE COMMUNITY
+// ══════════════════════════════════════════════
+function openCommunity(poll, animeName) {
+  currentCommunityAnime = { poll, animeName };
+  document.getElementById('mainApp').hidden = true;
+  const page = document.getElementById('communityPage');
+  page.hidden = false;
+
+  document.getElementById('communityTitle').textContent = `${animeName} ${t('community')}`;
+  document.getElementById('communitySubtitle').textContent = t('communitySubtitle');
+  document.getElementById('backBtn').textContent = t('back');
+
+  // Mise à jour form
+  const pseudoRadios = page.querySelectorAll('[name="comm-identity"]');
+  const pseudoInput = document.getElementById('commPseudo');
+  pseudoRadios.forEach(r => {
+    r.addEventListener('change', () => {
+      pseudoInput.style.display = r.value === 'pseudo' ? 'block' : 'none';
+    });
+  });
+
+  // Labels radio
+  page.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.getElementById('commText').placeholder = t('addComment');
+
+  renderCommunityComments(poll, animeName);
+}
+
+async function renderCommunityComments(poll, animeName) {
+  const container = document.getElementById('communityComments');
+  container.innerHTML = '<p style="color:var(--muted)">Chargement...</p>';
+
+  try {
+    const resp = await fetch('/polls');
+    const data = await resp.json();
+    const freshPoll = data.polls && data.polls[0];
+    const opt = freshPoll && freshPoll.options.find(o => optionName(o) === animeName);
+    const comments = (opt && opt.comments) || [];
+
+    container.innerHTML = '';
+
+    if (comments.length === 0) {
+      container.innerHTML = `<p class="no-comments">${t('noComments')}</p>`;
+    } else {
+      // Séparer commentaires principaux et réponses
+      const topLevel = comments.filter(c => !c.parentId);
+      const replies = comments.filter(c => c.parentId);
+
+      for (const c of topLevel) {
+        const box = await buildCommentBox(c, replies, freshPoll, animeName);
+        container.appendChild(box);
+      }
+    }
+  } catch (e) {
+    container.innerHTML = `<p style="color:var(--muted)">${t('errorLoad')}</p>`;
+  }
+}
+
+async function buildCommentBox(comment, allReplies, poll, animeName) {
+  const box = document.createElement('div');
+  box.className = 'comm-box';
+  box.dataset.id = comment.id;
+
+  // Traduire le texte si besoin
+  const displayText = currentLang !== 'fr' ? await translateComment(comment.text) : comment.text;
+
+  const top = document.createElement('div');
+  top.className = 'comm-top';
+  top.innerHTML = `
+    <strong class="comm-author">${comment.author}</strong>
+    <span class="comm-time">${new Date(comment.createdAt).toLocaleString()}</span>
+  `;
+
+  const body = document.createElement('p');
+  body.className = 'comm-body';
+  body.textContent = displayText;
+
+  const actions = document.createElement('div');
+  actions.className = 'comm-actions';
+  const replyBtn = document.createElement('button');
+  replyBtn.className = 'reply-btn';
+  replyBtn.textContent = t('reply');
+  actions.appendChild(replyBtn);
+
+  box.appendChild(top);
+  box.appendChild(body);
+  box.appendChild(actions);
+
+  // Réponses imbriquées
+  const childReplies = allReplies.filter(r => r.parentId === comment.id);
+  if (childReplies.length > 0) {
+    const repliesContainer = document.createElement('div');
+    repliesContainer.className = 'comm-replies';
+    for (const r of childReplies) {
+      const rb = await buildReplyBox(r);
+      repliesContainer.appendChild(rb);
+    }
+    box.appendChild(repliesContainer);
+  }
+
+  // Formulaire de réponse (caché par défaut)
+  const replyForm = document.createElement('form');
+  replyForm.className = 'reply-form';
+  replyForm.style.display = 'none';
+  replyForm.innerHTML = `
+    <div class="identity-row">
+      <label><input type="radio" name="reply-identity-${comment.id}" value="anon" checked> ${t('anonymous')}</label>
+      <label><input type="radio" name="reply-identity-${comment.id}" value="pseudo"> ${t('pseudo')}</label>
+      <input type="text" class="pseudo-input reply-pseudo" placeholder="..." style="display:none">
+    </div>
+    <div class="comm-input-row">
+      <input type="text" class="comm-text reply-text" placeholder="${t('replyPlaceholder')}" required>
+      <button type="submit" class="send-btn">➚</button>
+      <button type="button" class="cancel-reply-btn">${t('cancelReply')}</button>
+    </div>
+  `;
+
+  replyForm.querySelector(`.reply-pseudo`);
+  replyForm.querySelectorAll(`[name="reply-identity-${comment.id}"]`).forEach(r => {
+    r.addEventListener('change', () => {
+      replyForm.querySelector('.reply-pseudo').style.display = r.value === 'pseudo' ? 'block' : 'none';
+    });
+  });
+
+  replyBtn.addEventListener('click', () => {
+    replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
+  });
+  replyForm.querySelector('.cancel-reply-btn').addEventListener('click', () => {
+    replyForm.style.display = 'none';
+  });
+
+  replyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const isAnon = replyForm.querySelector(`[name="reply-identity-${comment.id}"]:checked`).value === 'anon';
+    const author = isAnon ? t('anonymous') : (replyForm.querySelector('.reply-pseudo').value.trim() || t('anonymous'));
+    const text = replyForm.querySelector('.reply-text').value.trim();
+    if (!text) return;
+
+    await fetch('/comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pollId: poll.id, option: animeName, author, text, parentId: comment.id })
+    });
+    replyForm.style.display = 'none';
+    replyForm.querySelector('.reply-text').value = '';
+    renderCommunityComments(poll, animeName);
+  });
+
+  box.appendChild(replyForm);
+  return box;
+}
+
+async function buildReplyBox(reply) {
+  const box = document.createElement('div');
+  box.className = 'comm-box reply-box';
+
+  const displayText = currentLang !== 'fr' ? await translateComment(reply.text) : reply.text;
+
+  box.innerHTML = `
+    <div class="comm-top">
+      <strong class="comm-author">${reply.author}</strong>
+      <span class="comm-time">${new Date(reply.createdAt).toLocaleString()}</span>
+    </div>
+    <p class="comm-body">${displayText}</p>
+  `;
+  return box;
+}
+
+// ── Bouton retour Community
+document.getElementById('backBtn').addEventListener('click', () => {
+  document.getElementById('communityPage').hidden = true;
+  document.getElementById('mainApp').hidden = false;
+  currentCommunityAnime = null;
+});
+
+// ── Formulaire Community principal
+document.getElementById('communityForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!currentCommunityAnime) return;
+
+  const { poll, animeName } = currentCommunityAnime;
+  const identityVal = document.querySelector('[name="comm-identity"]:checked').value;
+  const pseudoInput = document.getElementById('commPseudo');
+  const author = identityVal === 'anon' ? t('anonymous') : (pseudoInput.value.trim() || t('anonymous'));
+  const text = document.getElementById('commText').value.trim();
+  if (!text) return;
+
+  const resp = await fetch('/comment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pollId: poll.id, option: animeName, author, text })
+  });
+
+  if (resp.ok) {
+    document.getElementById('commText').value = '';
+    pseudoInput.value = '';
+    renderCommunityComments(poll, animeName);
+  } else {
+    alert(t('errorComment'));
+  }
+});
+
+window.addEventListener('load', () => {
+  // L'app démarre sur l'écran de sélection de langue
+  // loadPoll() est appelé après choix de la langue
+});

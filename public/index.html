@@ -10,24 +10,65 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="public-page">
-  <main class="public-shell">
+
+  <!-- ══════════ ÉCRAN SÉLECTION DE LANGUE ══════════ -->
+  <div id="langScreen" class="lang-screen">
+    <div class="lang-box">
+      <div class="lang-kicker">ANIME POLL</div>
+      <h1 class="lang-title">Choisissez votre langue<br><span>اختر لغتك</span><br><span style="font-size:1.2rem">Choose your language</span></h1>
+      <div class="lang-buttons">
+        <button class="lang-btn" data-lang="fr">🇫🇷 Français</button>
+        <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+        <button class="lang-btn" data-lang="ar">🇸🇦 العربية</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ APP PRINCIPALE ══════════ -->
+  <main class="public-shell" id="mainApp" hidden>
     <header id="titleWrap" class="hero-panel">
       <div class="hero-kicker">ANIME POLL // LIVE MATCH</div>
-      <h1 id="siteTitle" data-text="Sondage Animes">Sondage Animes</h1>
-      <p class="subtitle">Vote anonymement pour ton anime préféré et regarde le classement s'allumer en direct.</p>
+      <h1 id="siteTitle" data-text="Sondage Animes" data-i18n="siteTitle">Sondage Animes</h1>
+      <p class="subtitle" data-i18n="subtitle">Vote anonymement pour ton anime préféré et regarde le classement s'allumer en direct.</p>
     </header>
 
     <section id="pollArea" class="vote-zone" aria-live="polite">
-      <div id="loading" class="loading-panel">Chargement du sondage...</div>
+      <div id="loading" class="loading-panel" data-i18n="loading">Chargement du sondage...</div>
     </section>
 
     <section id="resultsArea" class="results-panel" hidden>
-      <div class="section-label">Résultats</div>
-      <h2>Classement actuel</h2>
+      <div class="section-label" data-i18n="resultsLabel">Résultats</div>
+      <h2 data-i18n="resultsTitle">Classement actuel</h2>
       <div id="results"></div>
-      <button id="newVote" class="primary">Voter à nouveau</button>
+      <p class="vote-confirmed" data-i18n="voteConfirmed">✅ Votre vote a été pris en compte.</p>
+      <button id="newVote" class="primary" data-i18n="newVote">Voter à nouveau</button>
     </section>
   </main>
+
+  <!-- ══════════ PAGE COMMUNITY ══════════ -->
+  <div id="communityPage" class="community-page" hidden>
+    <div class="community-shell">
+      <button id="backBtn" class="back-btn" data-i18n="back">← Retour</button>
+      <div class="community-header">
+        <div class="hero-kicker" id="communityKicker">COMMUNITY</div>
+        <h2 id="communityTitle">One Piece Community</h2>
+        <p id="communitySubtitle" data-i18n="communitySubtitle">Discute avec la communauté à propos de cet animé</p>
+      </div>
+      <div id="communityComments" class="community-comments"></div>
+      <form id="communityForm" class="community-form">
+        <div class="identity-row">
+          <label><input type="radio" name="comm-identity" value="anon" checked> <span data-i18n="anonymous">Anonyme</span></label>
+          <label><input type="radio" name="comm-identity" value="pseudo"> <span data-i18n="pseudo">Pseudo</span></label>
+          <input type="text" id="commPseudo" class="pseudo-input" placeholder="..." style="display:none">
+        </div>
+        <div class="comm-input-row">
+          <input type="text" id="commText" class="comm-text" data-i18n-placeholder="addComment" placeholder="Ajouter un message..." required>
+          <button type="submit" class="send-btn">➚</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
