@@ -4,17 +4,68 @@
       "id": "general-anime",
       "title": "Quel est ton anime préféré ?",
       "options": [
-        { "name": "One Piece", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Naruto", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Dragon Ball Z", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Jujutsu Kaisen", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Demon Slayer", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Attack on Titan", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Bleach", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Death Note", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "My Hero Academia", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
-        { "name": "Hunter x Hunter", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] }
+        {
+          "name": "One Piece",
+          "image": "https://upload.wikimedia.org/wikipedia/en/0/01/One_Piece_logo.png",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Naruto",
+          "image": "https://upload.wikimedia.org/wikipedia/en/9/9a/Naruto_logo.svg",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Dragon Ball Z",
+          "image": "https://upload.wikimedia.org/wikipedia/en/5/5e/Dragon_Ball_Z_Logo.png",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Jujutsu Kaisen",
+          "image": "https://upload.wikimedia.org/wikipedia/en/5/5a/Jujutsu_Kaisen_logo.png",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Demon Slayer",
+          "image": "https://upload.wikimedia.org/wikipedia/en/a/a7/Demon_Slayer_logo.png",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Attack on Titan",
+          "image": "https://upload.wikimedia.org/wikipedia/en/9/9f/Shingeki_no_Kyojin_Logo.png",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Bleach",
+          "image": "https://upload.wikimedia.org/wikipedia/en/3/3b/Bleach_logo.png",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Death Note",
+          "image": "https://upload.wikimedia.org/wikipedia/en/0/0f/Death_Note_Logo.png",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "My Hero Academia",
+          "image": "https://upload.wikimedia.org/wikipedia/en/2/2a/Boku_no_Hero_Academia_logo.svg",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        },
+        {
+          "name": "Hunter x Hunter",
+          "image": "https://upload.wikimedia.org/wikipedia/en/5/5b/Hunter_x_Hunter_logo.svg",
+          "votes": { "like": 0, "dislike": 0, "love": 0 },
+          "comments": []
+        }
       ]
     }
   ]
 }
+

@@ -271,11 +271,12 @@ button,input{font:inherit}
   color:var(--yellow);
 }
 
-.option-art{
+.option-art {
   position:relative;
   display:grid;
   place-items:center;
   min-height:112px;
+  width: 86px;
   color:#050506;
   font-family:Orbitron,Arial,sans-serif;
   font-size:1.55rem;
@@ -568,12 +569,22 @@ button.ghost{
   gap: 12px;
 }
 
+
 .anime-header {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-left: 10px;
+  padding-left: 26px;
+  justify-content: flex-start;
 }
+
+/* Pour rendre le nom d’anime plus visible : on le pousse vers la droite */
+.anime-header .option-name {
+  margin-left: auto;
+  padding-right: 10px;
+  text-align: right;
+}
+
 
 /* ══════════════════════════════════════════════
    BOUTONS VOTE TOGGLE
