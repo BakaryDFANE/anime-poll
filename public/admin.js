@@ -33,15 +33,42 @@ window.addEventListener('load', async ()=>{
   const resetBtn = await $('#resetVotes');
   const logoutBtn = await $('#logoutBtn');
 
+  // Création sondage
+  const createPollArea = await $('#createPollArea');
+  const optionArea = await $('#optionArea');
+  const noPollState = await $('#noPollState');
+  const createPollBtn = await $('#createPollBtn');
+  const newPollId = await $('#newPollId');
+  const newPollTitle = await $('#newPollTitle');
+
+
   // Si la clé de sécurité est déjà dans l'URL, on connecte directement l'admin
   const initialKey = getAdminKey();
+
+  async function refreshUIFromPoll() {
+    const poll = await fetchPoll();
+    if (!poll) {
+      if (noPollState) noPollState.hidden = false;
+      if (createPollArea) createPollArea.style.display = 'block';
+      if (optionArea) optionArea.style.display = 'none';
+      // optionArea doit rester masquée tant qu'on n'a pas de sondage
+      if (current) current.innerHTML = '';
+      return;
+    }
+
+    if (noPollState) noPollState.hidden = true;
+    if (createPollArea) createPollArea.style.display = 'none';
+    if (optionArea) optionArea.style.display = 'block';
+    renderPoll(poll);
+  }
+
   if (initialKey) {
     const loginArea = document.getElementById('loginArea');
     if (loginArea) loginArea.hidden = true;
     if (editor) editor.hidden = false;
-    const poll = await fetchPoll(); 
-    renderPoll(poll);
+    await refreshUIFromPoll();
   }
+
 
   // Connexion manuelle via le formulaire
   loginBtn.addEventListener('click', async ()=>{
@@ -60,12 +87,62 @@ window.addEventListener('load', async ()=>{
     }
   });
 
+  // Création de sondage
+  createPollBtn.addEventListener('click', async ()=>{
+    const id = newPollId.value.trim();
+    const title = newPollTitle.value.trim();
+    if (!id) return alert('Entrez un id de sondage');
+    if (!title) return alert('Entrez un titre de sondage');
+
+    const currentKey = getAdminKey();
+    const queryParam = currentKey ? `?key=${encodeURIComponent(currentKey)}` : '';
+
+    try {
+      createPollBtn.disabled = true;
+      createPollBtn.textContent = 'Création...';
+
+      const resp = await fetch(`/admin/addPoll${queryParam}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-admin-key': currentKey
+        },
+        credentials: 'include',
+        body: JSON.stringify({ id, title, options: [] })
+      });
+
+      const data = await readJsonResponse(resp);
+      alert('Sondage créé avec succès !');
+
+      // Recharger UI: devrait passer en mode “optionArea”
+      if (noPollState) noPollState.hidden = true;
+      if (createPollArea) createPollArea.style.display = 'none';
+      if (optionArea) optionArea.style.display = 'block';
+      renderPoll(data.poll);
+
+      newPollId.value = '';
+      newPollTitle.value = '';
+    } catch (err) {
+      alert('Erreur: ' + err.message);
+    } finally {
+      createPollBtn.disabled = false;
+      createPollBtn.textContent = 'Créer le sondage';
+    }
+  });
+
+
   // Ajout d'une option d'animé (avec ou sans URL d'image)
   addBtn.addEventListener('click', async ()=>{
     const opt = newOpt.value.trim();
     if(!opt) return alert('Entrez une option');
     const poll = await fetchPoll();
-    if(!poll) return alert('Aucun sondage disponible');
+    if(!poll) {
+      if (noPollState) noPollState.hidden = false;
+      if (createPollArea) createPollArea.style.display = 'block';
+      if (optionArea) optionArea.style.display = 'none';
+      return alert('Aucun sondage disponible');
+    }
+
 
     const imageUrlInput = document.getElementById('optionImage');
     const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";

@@ -20,20 +20,37 @@
     <section id="pollEditor" hidden>
       <h2>Modifier le sondage</h2>
       <div id="currentPoll"></div>
-      
-      <label>Nouvelle option <input id="newOption" placeholder="Nom de l'option"></label>
-      
-      <label>Lien de l'image (URL optionnelle) 
-        <input id="optionImage" type="text" placeholder="https://exemple.com/image.jpg">
-      </label>
-      
-      <button id="addOption" class="primary">Ajouter l'option</button>
-      <button id="resetVotes" class="ghost">Réinitialiser les votes</button>
-      <button id="logoutBtn" class="ghost">Se déconnecter</button>
+
+      <div id="noPollState" class="empty-state" style="margin:12px 0;">
+        <p>Aucun sondage disponible. Créez un sondage pour pouvoir ajouter des animés.</p>
+      </div>
+
+      <div id="createPollArea" style="display:none;">
+        <h3>Créer un sondage</h3>
+        <label>Id du sondage <input id="newPollId" placeholder="general-anime"></label>
+        <label>Titre <input id="newPollTitle" placeholder="Quel est ton anime préféré ?"></label>
+
+        <button id="createPollBtn" class="primary">Créer le sondage</button>
+      </div>
+
+      <div id="optionArea" style="display:none;">
+        <label>Nouvelle option <input id="newOption" placeholder="Nom de l'option"></label>
+
+        <label>Lien de l'image (URL optionnelle)
+          <input id="optionImage" type="text" placeholder="https://exemple.com/image.jpg">
+        </label>
+
+        <button id="addOption" class="primary">Ajouter l'option</button>
+        <button id="resetVotes" class="ghost">Réinitialiser les votes</button>
+        <button id="logoutBtn" class="ghost">Se déconnecter</button>
+      </div>
     </section>
+
 
     <p><a href="/">Retour au site public</a></p>
   </main>
   <script src="admin.js"></script>
 </body>
+
 </html>
+
