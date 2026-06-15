@@ -10,6 +10,7 @@
   <main class="container">
     <h1>Administration</h1>
     <p>Connectez-vous pour modifier le sondage.</p>
+    
     <div id="loginArea">
       <label>Utilisateur <input id="adminUser" placeholder="admin"></label>
       <label>Mot de passe <input id="adminPass" type="password" placeholder="mot de passe"></label>
@@ -19,8 +20,13 @@
     <section id="pollEditor" hidden>
       <h2>Modifier le sondage</h2>
       <div id="currentPoll"></div>
+      
       <label>Nouvelle option <input id="newOption" placeholder="Nom de l'option"></label>
-      <label>Image (optionnel) <input id="optionImage" type="file" accept="image/*"></label>
+      
+      <label>Lien de l'image (URL optionnelle) 
+        <input id="optionImage" type="text" placeholder="https://exemple.com/image.jpg">
+      </label>
+      
       <button id="addOption" class="primary">Ajouter l'option</button>
       <button id="resetVotes" class="ghost">Réinitialiser les votes</button>
       <button id="logoutBtn" class="ghost">Se déconnecter</button>
