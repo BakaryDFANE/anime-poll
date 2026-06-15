@@ -16,7 +16,7 @@ async function readJsonResponse(resp) {
   return data;
 }
 
-// Helper pour récupérer la clé secrète depuis l'URL de la page ou les inputs
+// Helper pour récupérer la clé secrète depuis l'URL de la page
 function getAdminKey() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.get('key') || "";
@@ -148,4 +148,44 @@ window.addEventListener('load', async ()=>{
       if (!name) return;
 
       const li = document.createElement('li');
-li.className = 'admin-option'; 
+      li.className = 'admin-option';
+
+      if (typeof opt === 'object' && opt.image) {
+        const img = document.createElement('img');
+        img.src = opt.image;
+        img.alt = name;
+        li.appendChild(img);
+      }
+
+      const label = document.createElement('span');
+      label.textContent = name;
+      li.appendChild(label);
+
+      const rem = document.createElement('button'); rem.textContent = 'Supprimer'; rem.className='ghost';
+      rem.addEventListener('click', async ()=>{
+        if(!confirm('Supprimer "'+name+'" ?')) return;
+        const currentKey = getAdminKey();
+        const queryParam = currentKey ? `?key=${encodeURIComponent(currentKey)}` : '';
+
+        try {
+          const resp = await fetch(`/admin/removeOption${queryParam}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-admin-key': currentKey
+            },
+            credentials: 'include',
+            body: JSON.stringify({ pollId: poll.id, option: name })
+          });
+          const data = await readJsonResponse(resp);
+          renderPoll(data.poll);
+        } catch (err) {
+          alert('Erreur: ' + err.message);
+        }
+      });
+      li.appendChild(rem);
+      list.appendChild(li);
+    });
+    current.appendChild(list);
+  }
+});
