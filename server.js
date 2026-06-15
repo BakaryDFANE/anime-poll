@@ -23,7 +23,6 @@ const redis = new Redis({
 });
 
 const POLLS_KEY = 'polls';
-const VOTES_KEY = 'votes';
 
 async function getPolls() {
   const data = await redis.get(POLLS_KEY);
@@ -33,16 +32,6 @@ async function getPolls() {
 
 async function savePolls(data) {
   await redis.set(POLLS_KEY, JSON.stringify(data));
-}
-
-async function getVotes() {
-  const data = await redis.get(VOTES_KEY);
-  if (!data) return { votes: [] };
-  return typeof data === 'string' ? JSON.parse(data) : data;
-}
-
-async function saveVotes(data) {
-  await redis.set(VOTES_KEY, JSON.stringify(data));
 }
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || (process.env.NODE_ENV === 'production'
@@ -84,11 +73,25 @@ function hasOption(poll, optionName) {
   return poll.options.some(option => getOptionName(option) === optionName);
 }
 
+// Helper pour s'assurer qu'une option possède la bonne structure d'objet
+function normalizeOptionStructure(opt) {
+  const name = getOptionName(opt);
+  const image = (typeof opt === 'object' && opt.image) ? opt.image : null;
+  const votes = (typeof opt === 'object' && opt.votes) ? opt.votes : { like: 0, dislike: 0, love: 0 };
+  const comments = (typeof opt === 'object' && opt.comments) ? opt.comments : [];
+  return { name, image, votes, comments };
+}
+
 // ─── Public routes ────────────────────────────────────────────────────────────
 
 app.get('/polls', async (req, res) => {
   try {
     const data = await getPolls();
+    // Normalisation à la volée pour éviter les plantages si l'ancienne structure JSON persiste
+    data.polls = data.polls.map(poll => {
+      poll.options = poll.options.map(normalizeOptionStructure);
+      return poll;
+    });
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: 'failed to read polls' });
@@ -97,15 +100,16 @@ app.get('/polls', async (req, res) => {
 
 app.get('/results', async (req, res) => {
   try {
-    const [pollsData, votesData] = await Promise.all([getPolls(), getVotes()]);
+    const pollsData = await getPolls();
     const results = pollsData.polls.map(poll => {
       const counts = {};
       poll.options.forEach(opt => {
-        const name = getOptionName(opt);
-        if (name) counts[name] = 0;
-      });
-      votesData.votes.filter(v => v.pollId === poll.id).forEach(v => {
-        if (counts.hasOwnProperty(v.option)) counts[v.option]++;
+        const norm = normalizeOptionStructure(opt);
+        counts[norm.name] = {
+          like: norm.votes.like || 0,
+          dislike: norm.votes.dislike || 0,
+          love: norm.votes.love || 0
+        };
       });
       return { pollId: poll.id, title: poll.title, counts };
     });
@@ -116,20 +120,73 @@ app.get('/results', async (req, res) => {
 });
 
 app.post('/vote', async (req, res) => {
-  const { pollId, option } = req.body;
-  if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
+  const { pollId, option, voteType } = req.body; // voteType vaut 'like', 'dislike' ou 'love'
+  if (!pollId || !option || !voteType) {
+    return res.status(400).json({ error: 'pollId, option and voteType required' });
+  }
+  if (!['like', 'dislike', 'love'].includes(voteType)) {
+    return res.status(400).json({ error: 'invalid voteType value' });
+  }
+
   try {
     const pollsData = await getPolls();
     const poll = pollsData.polls.find(p => p.id === pollId);
     if (!poll) return res.status(404).json({ error: 'Poll not found' });
-    if (!hasOption(poll, option)) return res.status(400).json({ error: 'Invalid option' });
-    const votesObj = await getVotes();
-    votesObj.votes.push({ pollId, option, ts: Date.now() });
-    await saveVotes(votesObj);
+
+    // Trouver l'option et incrémenter le bon émoji
+    let found = false;
+    poll.options = poll.options.map(opt => {
+      const norm = normalizeOptionStructure(opt);
+      if (norm.name === option) {
+        norm.votes[voteType] = (norm.votes[voteType] || 0) + 1;
+        found = true;
+      }
+      return norm;
+    });
+
+    if (!found) return res.status(400).json({ error: 'Invalid option' });
+
+    await savePolls(pollsData);
     res.json({ success: true });
   } catch (e) {
     console.error('Vote error:', e);
     res.status(500).json({ error: 'failed to save vote' });
+  }
+});
+
+// ── Nouvelle route publique : Poster un commentaire ──
+app.post('/comment', async (req, res) => {
+  const { pollId, option, author, text } = req.body;
+  if (!pollId || !option || !text) {
+    return res.status(400).json({ error: 'pollId, option and text are required' });
+  }
+
+  try {
+    const pollsData = await getPolls();
+    const poll = pollsData.polls.find(p => p.id === pollId);
+    if (!poll) return res.status(404).json({ error: 'Poll not found' });
+
+    let found = false;
+    poll.options = poll.options.map(opt => {
+      const norm = normalizeOptionStructure(opt);
+      if (norm.name === option) {
+        norm.comments.push({
+          author: author || 'Anonyme',
+          text: text,
+          createdAt: new Date().toISOString()
+        });
+        found = true;
+      }
+      return norm;
+    });
+
+    if (!found) return res.status(400).json({ error: 'Invalid option' });
+
+    await savePolls(pollsData);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Comment error:', e);
+    res.status(500).json({ error: 'failed to save comment' });
   }
 });
 
@@ -158,7 +215,6 @@ app.post('/admin/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// ── Nouvelle route : créer un sondage complet ──
 app.post('/admin/addPoll', async (req, res) => {
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
   const { id, title, options } = req.body;
@@ -168,7 +224,8 @@ app.post('/admin/addPoll', async (req, res) => {
     if (data.polls.find(p => p.id === id)) {
       return res.status(400).json({ error: 'poll with this id already exists' });
     }
-    const newPoll = { id, title, options: options || [] };
+    const structuredOptions = (options || []).map(opt => normalizeOptionStructure(opt));
+    const newPoll = { id, title, options: structuredOptions };
     data.polls.push(newPoll);
     await savePolls(data);
     res.json({ success: true, poll: newPoll });
@@ -177,7 +234,6 @@ app.post('/admin/addPoll', async (req, res) => {
   }
 });
 
-// ── Nouvelle route : supprimer un sondage ──
 app.post('/admin/deletePoll', async (req, res) => {
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
   const { pollId } = req.body;
@@ -200,8 +256,8 @@ app.post('/admin/addOption', async (req, res) => {
     const data = await getPolls();
     const poll = data.polls.find(p => p.id === pollId);
     if (!poll) return res.status(404).json({ error: 'poll not found' });
-    if (!hasOption(poll, option)) {
-      poll.options.push(option);
+    if (!hasOption(poll, getOptionName(option))) {
+      poll.options.push(normalizeOptionStructure(option));
       await savePolls(data);
     }
     res.json({ success: true, poll });
@@ -220,8 +276,9 @@ app.post('/admin/addOptionWithImage', upload.single('image'), async (req, res) =
     if (!poll) return res.status(404).json({ error: 'poll not found' });
     let imagePath = null;
     if (req.file) imagePath = '/uploads/' + req.file.filename;
-    const optionObj = { name, image: imagePath };
+    
     if (!hasOption(poll, name)) {
+      const optionObj = normalizeOptionStructure({ name, image: imagePath });
       poll.options.push(optionObj);
       await savePolls(data);
     }
@@ -250,7 +307,16 @@ app.post('/admin/removeOption', async (req, res) => {
 app.post('/admin/resetVotes', async (req, res) => {
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
   try {
-    await saveVotes({ votes: [] });
+    const data = await getPolls();
+    data.polls = data.polls.map(poll => {
+      poll.options = poll.options.map(opt => {
+        const norm = normalizeOptionStructure(opt);
+        norm.votes = { like: 0, dislike: 0, love: 0 };
+        return norm;
+      });
+      return poll;
+    });
+    await savePolls(data);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'failed to reset votes' });

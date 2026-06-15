@@ -4,16 +4,16 @@
       "id": "general-anime",
       "title": "Quel est ton anime préféré ?",
       "options": [
-        "One Piece",
-        "Naruto",
-        "Dragon Ball Z",
-        "Jujutsu Kaisen",
-        "Demon Slayer",
-        "Attack on Titan",
-        "Bleach",
-        "Death Note",
-        "My Hero Academia",
-        "Hunter x Hunter"
+        { "name": "One Piece", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Naruto", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Dragon Ball Z", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Jujutsu Kaisen", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Demon Slayer", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Attack on Titan", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Bleach", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Death Note", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "My Hero Academia", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] },
+        { "name": "Hunter x Hunter", "votes": { "like": 0, "dislike": 0, "love": 0 }, "comments": [] }
       ]
     }
   ]
