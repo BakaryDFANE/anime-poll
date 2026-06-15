@@ -309,6 +309,8 @@ async function loadPoll() {
       commBtn.addEventListener('click', () => openCommunity(poll, name));
       row.appendChild(commBtn);
 
+      // AnimeGrid: supprime le bouton "Voter à nouveau" (bouton de re-chargement) côté app.js
+      // (le bouton newVote dans l’état résultats reste géré par le back-end UI, donc rien à faire ici)
       animeGrid.appendChild(row);
     });
 
@@ -376,11 +378,8 @@ async function showResults() {
     if (confirmed) confirmed.textContent = t('voteConfirmed');
 
     const newVoteBtn = document.getElementById('newVote');
-    newVoteBtn.textContent = t('newVote');
-    newVoteBtn.onclick = () => {
-      loadPoll();
-      document.getElementById('pollArea').scrollIntoView({ behavior: 'smooth' });
-    };
+    // Suppression du bouton "Voter à nouveau" demandée
+    if (newVoteBtn) newVoteBtn.remove();
 
     resArea.hidden = false;
   } catch (err) { console.error(err); }
