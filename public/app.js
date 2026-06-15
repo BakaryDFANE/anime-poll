@@ -121,15 +121,7 @@ function applyTranslations() {
 // ══════════════════════════════════════════════
 //  SÉLECTION LANGUE
 // ══════════════════════════════════════════════
-document.querySelectorAll('.lang-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentLang = btn.dataset.lang;
-    document.getElementById('langScreen').hidden = true;
-    document.getElementById('mainApp').hidden = false;
-    applyTranslations();
-    loadPoll();
-  });
-});
+// Les boutons sont initialisés dans DOMContentLoaded
 
 // ══════════════════════════════════════════════
 //  UTILITAIRES
@@ -223,13 +215,16 @@ async function loadPoll() {
       const headerDiv = document.createElement('div');
       headerDiv.className = 'anime-header';
 
-      const art = document.createElement('span');
+      const art = document.createElement('div');
       art.className = 'option-art';
       if (typeof opt === 'object' && opt.image) {
         const img = document.createElement('img');
         img.src = opt.image;
         img.alt = name;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;border-radius:0;';
+        img.onerror = () => { art.textContent = optionInitials(name); };
         art.appendChild(img);
+        art.style.padding = '0';
       } else {
         art.textContent = optionInitials(name);
       }
@@ -563,40 +558,63 @@ async function buildReplyBox(reply) {
 }
 
 // ── Bouton retour Community
-document.getElementById('backBtn').addEventListener('click', () => {
-  document.getElementById('communityPage').hidden = true;
-  document.getElementById('mainApp').hidden = false;
-  currentCommunityAnime = null;
-});
 
 // ── Formulaire Community principal
-document.getElementById('communityForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!currentCommunityAnime) return;
 
-  const { poll, animeName } = currentCommunityAnime;
-  const identityVal = document.querySelector('[name="comm-identity"]:checked').value;
-  const pseudoInput = document.getElementById('commPseudo');
-  const author = identityVal === 'anon' ? t('anonymous') : (pseudoInput.value.trim() || t('anonymous'));
-  const text = document.getElementById('commText').value.trim();
-  if (!text) return;
-
-  const resp = await fetch('/comment', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pollId: poll.id, option: animeName, author, text })
+document.addEventListener('DOMContentLoaded', () => {
+  // Boutons langue
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentLang = btn.dataset.lang;
+      document.getElementById('langScreen').hidden = true;
+      document.getElementById('mainApp').hidden = false;
+      applyTranslations();
+      loadPoll();
+    });
   });
 
-  if (resp.ok) {
-    document.getElementById('commText').value = '';
-    pseudoInput.value = '';
-    renderCommunityComments(poll, animeName);
-  } else {
-    alert(t('errorComment'));
+  // Bouton retour Community
+  const backBtn = document.getElementById('backBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      document.getElementById('communityPage').hidden = true;
+      document.getElementById('mainApp').hidden = false;
+      currentCommunityAnime = null;
+    });
   }
-});
 
-window.addEventListener('load', () => {
-  // L'app démarre sur l'écran de sélection de langue
-  // loadPoll() est appelé après choix de la langue
+  // Formulaire Community principal
+  const commForm = document.getElementById('communityForm');
+  if (commForm) {
+    commForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentCommunityAnime) return;
+      const { poll, animeName } = currentCommunityAnime;
+      const identityVal = document.querySelector('[name="comm-identity"]:checked').value;
+      const pseudoInput = document.getElementById('commPseudo');
+      const author = identityVal === 'anon' ? t('anonymous') : (pseudoInput.value.trim() || t('anonymous'));
+      const text = document.getElementById('commText').value.trim();
+      if (!text) return;
+      const resp = await fetch('/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pollId: poll.id, option: animeName, author, text })
+      });
+      if (resp.ok) {
+        document.getElementById('commText').value = '';
+        pseudoInput.value = '';
+        renderCommunityComments(poll, animeName);
+      } else {
+        alert(t('errorComment'));
+      }
+    });
+  }
+
+  // Pseudo toggle Community
+  document.querySelectorAll('[name="comm-identity"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const pseudo = document.getElementById('commPseudo');
+      if (pseudo) pseudo.style.display = r.value === 'pseudo' ? 'block' : 'none';
+    });
+  });
 });

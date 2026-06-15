@@ -253,14 +253,20 @@ app.post('/admin/deletePoll', async (req, res) => {
 
 app.post('/admin/addOption', async (req, res) => {
   if (!checkAdmin(req)) return res.status(401).json({ error: 'unauthorized' });
-  const { pollId, option } = req.body;
+  const { pollId, option, image } = req.body;
   if (!pollId || !option) return res.status(400).json({ error: 'pollId and option required' });
   try {
     const data = await getPolls();
     const poll = data.polls.find(p => p.id === pollId);
     if (!poll) return res.status(404).json({ error: 'poll not found' });
-    if (!hasOption(poll, getOptionName(option))) {
-      poll.options.push(normalizeOptionStructure(option));
+    const optName = typeof option === 'string' ? option : getOptionName(option);
+    if (!hasOption(poll, optName)) {
+      // Construire l'objet option avec l'image URL si fournie
+      const optObj = normalizeOptionStructure({
+        name: optName,
+        image: image || (typeof option === 'object' ? option.image : null) || null
+      });
+      poll.options.push(optObj);
       await savePolls(data);
     }
     res.json({ success: true, poll });
