@@ -16,6 +16,12 @@ async function readJsonResponse(resp) {
   return data;
 }
 
+// Helper pour récupérer la clé secrète depuis l'URL de la page ou les inputs
+function getAdminKey() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('key') || "";
+}
+
 window.addEventListener('load', async ()=>{
   const userInput = await $('#adminUser');
   const passInput = await $('#adminPass');
@@ -27,6 +33,16 @@ window.addEventListener('load', async ()=>{
   const resetBtn = await $('#resetVotes');
   const logoutBtn = await $('#logoutBtn');
 
+  // Vérification automatique à l'ouverture : si la clé est dans l'URL, on affiche directement l'éditeur
+  const initialKey = getAdminKey();
+  if (initialKey) {
+    const loginArea = document.getElementById('loginArea');
+    if (loginArea) loginArea.hidden = true;
+    if (editor) editor.hidden = false;
+    const poll = await fetchPoll(); 
+    renderPoll(poll);
+  }
+
   loginBtn.addEventListener('click', async ()=>{
     const user = userInput.value.trim() || 'admin';
     const pass = passInput.value.trim();
@@ -35,8 +51,9 @@ window.addEventListener('load', async ()=>{
     try {
       const resp = await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user, pass}), credentials: 'include'});
       await readJsonResponse(resp);
-      editor.hidden = false; document.getElementById('loginArea').hidden = true;
-      const poll = await fetchPoll(); renderPoll(poll);
+      
+      // Redirige proprement en ajoutant la clé à l'URL pour sécuriser les requêtes suivantes
+      window.location.href = window.location.pathname + '?key=' + encodeURIComponent(pass);
     } catch (err) {
       alert('Échec de connexion');
     }
@@ -49,41 +66,76 @@ window.addEventListener('load', async ()=>{
     if(!poll) return alert('Aucun sondage disponible');
 
     const fileInput = document.getElementById('optionImage');
+    const currentKey = getAdminKey();
+
+    // On prépare l'URL avec la clé secrète pour contourner les bugs de session Vercel
+    const queryParam = currentKey ? `?key=${encodeURIComponent(currentKey)}` : '';
+
     try {
+      addBtn.disabled = true; // Évite les doubles clics accidentels pendant l'envoi
+      addBtn.textContent = 'Envoi...';
+
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
         const form = new FormData();
         form.append('image', fileInput.files[0]);
         form.append('name', opt);
         form.append('pollId', poll.id);
-        const resp = await fetch('/admin/addOptionWithImage',{method:'POST',credentials:'include',body:form});
+
+        const resp = await fetch(`/admin/addOptionWithImage${queryParam}`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-admin-key': currentKey }, // Double sécurité
+          body: form
+        });
         const data = await readJsonResponse(resp);
         renderPoll(data.poll);
         newOpt.value = ''; fileInput.value = '';
       } else {
-        const resp = await fetch('/admin/addOption',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({pollId:poll.id, option:opt})});
+        const resp = await fetch(`/admin/addOption${queryParam}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-admin-key': currentKey
+          },
+          credentials: 'include',
+          body: JSON.stringify({ pollId: poll.id, option: opt })
+        });
         const data = await readJsonResponse(resp);
         renderPoll(data.poll);
         newOpt.value = '';
       }
+      alert(`"${opt}" a été ajouté avec succès !`);
     } catch (err) {
-      alert('Erreur: '+err.message);
+      alert('Erreur: ' + err.message);
+    } finally {
+      addBtn.disabled = false;
+      addBtn.textContent = "Ajouter l'option";
     }
   });
 
   resetBtn.addEventListener('click', async ()=>{
     if(!confirm('Réinitialiser tous les votes ?')) return;
+    const currentKey = getAdminKey();
+    const queryParam = currentKey ? `?key=${encodeURIComponent(currentKey)}` : '';
+
     try {
-      const resp = await fetch('/admin/resetVotes',{method:'POST',credentials:'include'});
+      const resp = await fetch(`/admin/resetVotes${queryParam}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-admin-key': currentKey }
+      });
       await readJsonResponse(resp);
       alert('Votes réinitialisés');
+      window.location.reload();
     } catch (err) {
-      alert('Erreur: '+err.message);
+      alert('Erreur: ' + err.message);
     }
   });
 
   logoutBtn.addEventListener('click', async ()=>{
     await fetch('/admin/logout',{method:'POST',credentials:'include'});
-    editor.hidden = true; document.getElementById('loginArea').hidden = false;
+    // On vide l'URL et on réaffiche le login
+    window.location.href = window.location.pathname;
   });
 
   function renderPoll(poll){
@@ -96,33 +148,4 @@ window.addEventListener('load', async ()=>{
       if (!name) return;
 
       const li = document.createElement('li');
-      li.className = 'admin-option';
-
-      if (typeof opt === 'object' && opt.image) {
-        const img = document.createElement('img');
-        img.src = opt.image;
-        img.alt = name;
-        li.appendChild(img);
-      }
-
-      const label = document.createElement('span');
-      label.textContent = name;
-      li.appendChild(label);
-
-      const rem = document.createElement('button'); rem.textContent = 'Supprimer'; rem.className='ghost';
-      rem.addEventListener('click', async ()=>{
-        if(!confirm('Supprimer "'+name+'" ?')) return;
-        try {
-          const resp = await fetch('/admin/removeOption',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({pollId:poll.id, option:name})});
-          const data = await readJsonResponse(resp);
-          renderPoll(data.poll);
-        } catch (err) {
-          alert('Erreur: '+err.message);
-        }
-      });
-      li.appendChild(rem);
-      list.appendChild(li);
-    });
-    current.appendChild(list);
-  }
-});
+      li.className
